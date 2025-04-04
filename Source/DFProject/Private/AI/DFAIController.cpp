@@ -1,4 +1,5 @@
 #include "AI/DFAIController.h"
+#include "DFProject.h"
 #include "BehaviorTree/BehaviorTree.h"
 #include "BehaviorTree/BlackboardData.h"
 #include "BehaviorTree/BlackboardComponent.h"
@@ -31,8 +32,8 @@ void ADFAIController::BeginAI(APawn* InPawn)
 		if (UseBlackboard(BlackboardDataAsset, BlackboardComponent) == true)
 		{
 			bool bRunSucceeded = RunBehaviorTree(BehaviorTree);
-			checkf(bRunSucceeded == true, TEXT("Fail to run Behavior Tree..."));
-
+			CHECK(bRunSucceeded != BehaviorTree, )
+			LOG(Log, TEXT("Run Behavior Tree"))
 		}
 	}
 }
