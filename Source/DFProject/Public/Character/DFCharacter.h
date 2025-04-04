@@ -65,6 +65,9 @@ public:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Input)
 	TObjectPtr<UInputAction> HeadbuttAction;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Input)
+	TObjectPtr<UInputAction> JumpAction;
 };
 
 

@@ -56,37 +56,42 @@ void ADFCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 		&ADFCharacter::Sprint
 	);
 	
+	EnhancedInputComponent->BindAction(
+		JumpAction,
+		ETriggerEvent::Triggered,
+		this,
+		&ADFCharacter::Jump
+	);
 }
 
 void ADFCharacter::Move(const FInputActionValue& Value)
 {
 	AController* PlayerController = GetController();
 
-	if (!ensure(PlayerController)) return;
+	if (!PlayerController) return;
 
 	const FVector2D MoveValue = Value.Get<FVector2D>();
-	const FRotator MovementRotation(0.f, PlayerController->GetControlRotation().Yaw, 0.0f);
+	
+	// 카메라의 현재 Yaw(좌우) 회전 값을 기준으로 이동 방향 설정
+	const FRotator CameraRotation = Camera->GetComponentRotation();
+	const FRotator MovementRotation(0.f, CameraRotation.Yaw, 0.0f);
 
 	FVector MovementDirection = FVector::ZeroVector;
 
 	if (MoveValue.X != 0.0f)
 	{
-		MovementDirection = MovementRotation.RotateVector(FVector::ForwardVector);
-		AddMovementInput(MovementDirection, MoveValue.X);
+		MovementDirection += MovementRotation.RotateVector(FVector::ForwardVector) * MoveValue.X;
 	}
 
 	if (MoveValue.Y != 0.0f)
 	{
-		MovementDirection = MovementRotation.RotateVector(FVector::RightVector);
-		AddMovementInput(MovementDirection, MoveValue.Y);
+		MovementDirection += MovementRotation.RotateVector(FVector::RightVector) * MoveValue.Y;
 	}
 
-	// 🔥 이동 방향이 0이 아니라면 캐릭터 회전 적용 (부드럽게)
+	// 이동 방향 적용
 	if (!MovementDirection.IsNearlyZero())
 	{
-		FRotator TargetRotation = MovementDirection.Rotation();
-		FRotator NewRotation = FMath::RInterpTo(GetActorRotation(), TargetRotation, GetWorld()->GetDeltaSeconds(), 10.0f);
-		SetActorRotation(FRotator(0.f, NewRotation.Yaw, 0.f)); // Yaw 회전만 적용
+		AddMovementInput(MovementDirection.GetSafeNormal());
 	}
 }
 
