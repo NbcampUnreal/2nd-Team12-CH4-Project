@@ -241,8 +241,12 @@ void ADFCharacter::ApplyPhysicalAnimationSettings()
 
 void ADFCharacter::Stun()
 {
+	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_None);
 	auto SMesh = GetMesh();
+	SMesh->bPauseAnims = true;
 	SMesh->SetSimulatePhysics(true);
 	SMesh->SetCollisionProfileName("Ragdoll");
-	PhysicalAnimComp->SetSkeletalMeshComponent(nullptr);
+	//SMesh->Stop();
+	//PhysicalAnimComp->SetSkeletalMeshComponent(nullptr);
+	PhysicalAnimComp->SetStrengthMultiplyer(0.0f);
 }
