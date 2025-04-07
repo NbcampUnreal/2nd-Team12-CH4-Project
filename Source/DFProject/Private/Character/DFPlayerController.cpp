@@ -14,13 +14,13 @@ void ADFPlayerController::BeginPlay()
 
 	ULocalPlayer* LocalPlayer = Cast<ULocalPlayer>(GetLocalPlayer());
 	
-	if (ensure(LocalPlayer))
+	if (LocalPlayer)
 	{
 		UEnhancedInputLocalPlayerSubsystem* Subsystem = LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>();
 		
-		if (ensure(Subsystem))
+		if (Subsystem)
 		{
-			if (ensure(IMC)) Subsystem->AddMappingContext(IMC, 0);
+			if (IMC) Subsystem->AddMappingContext(IMC, 0);
 		}
 	}
 }
