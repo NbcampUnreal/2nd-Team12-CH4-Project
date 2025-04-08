@@ -3,11 +3,11 @@
 
 ADFGameState::ADFGameState()
 {
-    // ±âº»°ª ¼³Á¤ (ÇÊ¿ä¿¡ µû¶ó º¯°æ)
+    // ï¿½âº»ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ (ï¿½Ê¿ä¿¡ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½)
     LobbyName = TEXT("Default Lobby");
     LobbyMaxPlayers = 4;
     CurrentPlayerCount = 0;
-    StartCountdown = 10.0f; // ¿¹½Ã: 10ÃÊ Ä«¿îÆ®´Ù¿î
+    StartCountdown = 10.0f; // ï¿½ï¿½ï¿½ï¿½: 10ï¿½ï¿½ Ä«ï¿½ï¿½Æ®ï¿½Ù¿ï¿½
     bLobbyReady = false;
     PlayerNames = TArray<FString>();
 }
