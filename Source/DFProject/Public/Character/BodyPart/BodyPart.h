@@ -36,8 +36,11 @@ protected:
 	virtual void BeginPlay() override;
 
 public:
-	UFUNCTION(BlueprintCallable, Category="BodyPart")
+	UFUNCTION(BlueprintCallable, NetMulticast, Reliable, Category="BodyPart")
 	virtual void Attach(ACharacter* TargetCharacter, const UAttachInfoComponent* AttachInfo);
+	
+	UFUNCTION(BlueprintCallable, Server, Reliable)
+	virtual void Server_ApplyImpulse();
 	
 	UFUNCTION(BlueprintCallable, Category="BodyPart")
 	virtual void ApplyImpulse();

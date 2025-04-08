@@ -7,6 +7,7 @@
 #include "Camera/CameraComponent.h"
 #include "Character/BodyPart/BodyPart.h"
 #include "Character/BodyPart/AttachInfoComponent.h"
+#include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "PhysicsEngine/PhysicalAnimationComponent.h"
@@ -15,8 +16,9 @@
 ADFCharacter::ADFCharacter()
 {
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = true;
 	bUseControllerRotationYaw = false;
+	
 	SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
 	SpringArm->bUsePawnControlRotation = false;
 	SpringArm->SetupAttachment(GetRootComponent());
@@ -39,10 +41,81 @@ ADFCharacter::ADFCharacter()
 void ADFCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+	GetMesh()->bPauseAnims = true;
+	MeshOffset = GetMesh()->GetRelativeTransform();
 
 	ApplyPhysicalAnimationSettings();
+}
 
-	SpawnBodyParts();
+void ADFCharacter::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	if (bIsRecovering)
+	{
+		PhysicalAnimComp->SetStrengthMultiplyer(RecoverAlpha);
+
+		if (USkeletalMeshComponent* SMesh = GetMesh())
+		{
+			// 현재 회전
+			FQuat CurrentQuat = SMesh->GetComponentQuat();
+
+			// 목표 회전 계산 (Yaw은 Initial 유지, Pitch & Roll은 MeshOffset 기준)
+			FRotator InitialRotator = InitialRecoveryRotation.Rotator();
+			FRotator MeshOffsetRotator = MeshOffset.GetRotation().Rotator();
+
+			FRotator TargetRotator;
+			TargetRotator.Yaw = InitialRotator.Yaw;
+			TargetRotator.Pitch = MeshOffsetRotator.Pitch;
+			TargetRotator.Roll = MeshOffsetRotator.Roll;
+
+			FQuat TargetQuat = TargetRotator.Quaternion();
+
+			// 회복 알파 계산 (0에서 1로 서서히 증가)
+			RecoverAlpha = FMath::Clamp(RecoverAlpha + DeltaTime * RecoverSpeed, 0.f, 1.f);
+
+			// 부드럽게 회전 보간
+			FQuat BlendedQuat = FQuat::Slerp(CurrentQuat, TargetQuat, RecoverAlpha);
+			FQuat DeltaQuat = BlendedQuat * CurrentQuat.Inverse();
+			DeltaQuat.Normalize();
+
+			FVector Axis;
+			float Angle;
+			DeltaQuat.ToAxisAndAngle(Axis, Angle);
+
+			if (Angle > KINDA_SMALL_NUMBER)
+			{
+				FVector Torque = Axis * Angle * 100.0f; //Torque Strength로 변수화 해야함
+				SMesh->AddTorqueInRadians(Torque, NAME_None, true);
+			}
+
+			// 정렬되었으면 회복 완료
+			const float AngleThreshold = 2.0f * (PI / 180.0f); // 2도
+			if (Angle < AngleThreshold)
+			{
+				FinishGetUp();
+				bIsRecovering = false;
+				RecoverAlpha = 0.f;
+			}
+		}
+
+		// 부드러운 회복 힘 증폭
+		RecoverAlpha = FMath::Min(RecoverAlpha + DeltaTime * RecoverSpeed, 1.0f);
+	}
+	
+	if (!bIsStunned) return;
+
+	FVector MeshLocation = GetMesh()->GetComponentLocation() - MeshOffset.GetLocation();
+	FVector NewCapsuleLocation = FVector(MeshLocation.X, MeshLocation.Y, MeshLocation.Z);
+	SetActorLocation(NewCapsuleLocation);
+
+	FName ReferenceBone = TEXT("Hips"); // 또는 pelvis, root 등
+	FTransform BoneTransform = GetMesh()->GetSocketTransform(ReferenceBone, RTS_World);
+	FRotator TargetRotation = BoneTransform.GetRotation().Rotator() - MeshOffset.Rotator();
+	TargetRotation.Pitch = 0.0f;
+	TargetRotation.Roll = 0.0f;
+	SetActorRotation(TargetRotation);
+
 }
 
 // Called to bind functionality to input
@@ -105,6 +178,7 @@ void ADFCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 
 void ADFCharacter::Move(const FInputActionValue& Value)
 {
+	if (bIsStunned) return;
 	const FVector2D MoveValue = Value.Get<FVector2D>();
 	
 	// 카메라의 현재 Yaw(좌우) 회전 값을 기준으로 이동 방향 설정
@@ -154,6 +228,7 @@ void ADFCharacter::Multicast_Move_Implementation(const FRotator& NewRotation)
 
 void ADFCharacter::Sprint(const FInputActionValue& Value)
 {
+	if (bIsStunned) return;
 }
 
 void ADFCharacter::Look(const FInputActionValue& Value)
@@ -178,13 +253,30 @@ void ADFCharacter::Look(const FInputActionValue& Value)
 
 	SpringArm->SetRelativeRotation(CurrentRotation);
 }
+
+
 void ADFCharacter::Grab(const FInputActionValue& Value)
 {
+	Server_Grab();
+}
+
+void ADFCharacter::Server_Grab_Implementation()
+{
+	if (bIsStunned) return;
 }
 
 void ADFCharacter::DropKick(const FInputActionValue& Value)
 {
+	Server_DropKick();
+}
+
+void ADFCharacter::Server_DropKick_Implementation()
+{
+	if (bIsStunned) return;
+	
+	if (!BodyParts.Contains(EBodyPartType::LeftFoot) || !BodyParts.Contains(EBodyPartType::RightFoot)) return;
 	if (!BodyParts[EBodyPartType::LeftFoot] || !BodyParts[EBodyPartType::RightFoot]) return;
+
 	if (!GetCharacterMovement()->IsFalling()) return;
 
 	BodyParts[EBodyPartType::LeftFoot]->ApplyImpulse();
@@ -193,7 +285,14 @@ void ADFCharacter::DropKick(const FInputActionValue& Value)
 
 void ADFCharacter::Headbutt(const FInputActionValue& Value)
 {
-	if (!BodyParts[EBodyPartType::Head]) return;
+	Server_Headbutt();
+}
+
+void ADFCharacter::Server_Headbutt_Implementation()
+{
+	if (bIsStunned) return;
+	
+	if (!BodyParts.Contains(EBodyPartType::Head) || !BodyParts[EBodyPartType::Head]) return;
 
 	BodyParts[EBodyPartType::Head]->ApplyImpulse();
 }
@@ -201,33 +300,54 @@ void ADFCharacter::Headbutt(const FInputActionValue& Value)
 
 void ADFCharacter::StartJump(const FInputActionValue& Value)
 {
+	if (bIsStunned) return;
 	Jump();
 }
 
 void ADFCharacter::SpawnBodyParts()
 {
-	TArray<UAttachInfoComponent*> AttachInfos;
-	GetComponents<UAttachInfoComponent>(AttachInfos);
-
-	for (UAttachInfoComponent* Info : AttachInfos)
+	if (HasAuthority()) //서버에선 바디파츠 생성. 바디파츠는 복제됨
 	{
-		if (!Info || !IsValid(Info->BodyPartClass)) continue;
+		TArray<UAttachInfoComponent*> AttachInfos;
+		GetComponents<UAttachInfoComponent>(AttachInfos);
 
-		ABodyPart* SpawnedPart = GetWorld()->SpawnActor<ABodyPart>(Info->BodyPartClass);
-		if (!SpawnedPart) continue;
+		for (UAttachInfoComponent* Info : AttachInfos)
+		{
+			if (!Info || !IsValid(Info->BodyPartClass)) continue;
 
-		SpawnedPart->Attach(this, Info);
+			FActorSpawnParameters SpawnParams;
+			SpawnParams.Owner = this;
+			SpawnParams.Instigator = GetInstigator();
+		
+			ABodyPart* SpawnedPart = GetWorld()->SpawnActor<ABodyPart>(Info->BodyPartClass);
+			if (!SpawnedPart) continue;
 
-		BodyParts.Add(Info->BodyPartType, SpawnedPart);
+			SpawnedPart->SetReplicates(true);
+			SpawnedPart->Attach(this, Info);
+
+			BodyParts.Add(Info->BodyPartType, SpawnedPart);
+		}
 	}
+	
+	GetMesh()->bPauseAnims = false; // 클라는 애니메이션 재생 시작
 }
 
 void ADFCharacter::Punch(const FInputActionValue& Value)
 {
-	if (Left) BodyParts[EBodyPartType::LeftFist]->ApplyImpulse();
+	Server_Punch();
+}
+
+void ADFCharacter::Server_Punch_Implementation()
+{
+	if (bIsStunned) return;
+	if (!BodyParts.Contains(EBodyPartType::LeftFist) || !BodyParts.Contains(EBodyPartType::RightFist)) return;
+	if (!BodyParts[EBodyPartType::LeftFist] || !BodyParts[EBodyPartType::RightFist]) return;
+	
+	
+	if (bLeft) BodyParts[EBodyPartType::LeftFist]->ApplyImpulse();
 	else BodyParts[EBodyPartType::RightFist]->ApplyImpulse();
 
-	Left = !Left;
+	bLeft = !bLeft;	
 }
 
 void ADFCharacter::ApplyPhysicalAnimationSettings()
@@ -241,12 +361,46 @@ void ADFCharacter::ApplyPhysicalAnimationSettings()
 
 void ADFCharacter::Stun()
 {
-	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_None);
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	
 	auto SMesh = GetMesh();
 	SMesh->bPauseAnims = true;
-	SMesh->SetSimulatePhysics(true);
-	SMesh->SetCollisionProfileName("Ragdoll");
-	//SMesh->Stop();
-	//PhysicalAnimComp->SetSkeletalMeshComponent(nullptr);
+	SMesh->SetSimulatePhysics(true); // 메시에 피직스 적용
+	PhysicalAnimComp->SetStrengthMultiplyer(0.0f); // 완전한 래그돌처럼 보이기 위해 래그돌 비율을 최대로
+	bIsStunned = true;
+}
+
+void ADFCharacter::RecoverFromStun()
+{
 	PhysicalAnimComp->SetStrengthMultiplyer(0.0f);
+	bIsRecovering = true;
+	RecoverAlpha = 0.0f;
+	
+	InitialRecoveryRotation = GetMesh()->GetComponentQuat();
+}
+
+void ADFCharacter::FinishGetUp()
+{
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	auto SMesh = GetMesh();
+	SMesh->SetSimulatePhysics(false);
+	
+	PhysicalAnimComp->SetStrengthMultiplyer(0.5f);
+	SMesh->SetRelativeTransform(MeshOffset);
+	GetMesh()->SetAllBodiesBelowSimulatePhysics(PhysicalAnimStartBone, true, false);
+	
+	SMesh->bPauseAnims = false;
+	bIsStunned = false;
+
+	//FVector Up = GetMesh()->GetUpVector();
+	//
+	//if (FVector::DotProduct(Up, FVector::UpVector) < 0.f)
+	//{
+	//	PlayAnimMontage(GetUpFrontMontage);
+	//}
+	//else
+	//{
+	//	PlayAnimMontage(GetUpBackMontage);		
+	//}
+	
 }

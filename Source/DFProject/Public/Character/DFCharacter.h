@@ -29,10 +29,9 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-
+	virtual void Tick(float DeltaTime) override;  
 public:	
 
-	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 	void Move(const FInputActionValue& Value);
@@ -43,14 +42,40 @@ public:
 	UFUNCTION(NetMulticast, Unreliable)
 	void Multicast_Move(const FRotator& Rotation);
 
-	void Punch(const FInputActionValue& Value);
-	void Sprint(const FInputActionValue& Value);
-	void Look(const FInputActionValue& Value);
-	void Grab(const FInputActionValue& Value);
-	void DropKick(const FInputActionValue& Value);
-	void StartJump(const FInputActionValue& Value);
-	void Headbutt(const FInputActionValue& Value);
 	
+	void Punch(const FInputActionValue& Value);
+
+	UFUNCTION(Server, Reliable, BlueprintCallable)
+	void Server_Punch();
+
+	
+	void Sprint(const FInputActionValue& Value); //  CharacterMovement의 스피드 올리기 (이건 자동 리플), 달리기 이펙트 생성
+	
+	void Look(const FInputActionValue& Value); // 다른 클라는 몰라도 되니까 로컬만
+
+	void Grab(const FInputActionValue& Value);
+
+	UFUNCTION(Server, Reliable, BlueprintCallable)
+	void Server_Grab();
+	
+	
+
+	void DropKick(const FInputActionValue& Value);
+
+	UFUNCTION(Server, Reliable, BlueprintCallable)
+	void Server_DropKick();
+	
+	
+	void StartJump(const FInputActionValue& Value);
+
+	
+	void Headbutt(const FInputActionValue& Value);
+
+	UFUNCTION(Server, Reliable, BlueprintCallable)
+	void Server_Headbutt();
+	
+	
+	UFUNCTION(BlueprintCallable, Category="PhysicalAnimation")
 	void SpawnBodyParts();
 
 	UFUNCTION(BlueprintCallable, Category="PhysicalAnimation")
@@ -58,6 +83,12 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category="PhysicalAnimation")
 	void Stun();
+	
+	UFUNCTION(BlueprintCallable, Category="PhysicalAnimation")
+	void RecoverFromStun();
+
+	UFUNCTION(BlueprintCallable, Category="PhysicalAnimation")
+	void FinishGetUp();
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category=Camera)
 	TObjectPtr<USpringArmComponent> SpringArm;
@@ -112,9 +143,27 @@ public:
 
 	UPROPERTY()
 	TMap<EBodyPartType, ABodyPart*> BodyParts;
+
+	UPROPERTY()
+	FTransform MeshOffset;
+
+	UPROPERTY()
+	FQuat InitialRecoveryRotation;
+
+	bool bLeft = true;
+	bool bIsStunned = false;
+	bool bIsRecovering = false;
+	float RecoverAlpha = 0.0f;
+	float RecoverSpeed = 0.5f;
 	
-	bool Left = true;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Animations")
+	UAnimMontage* GetUpFrontMontage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Animations")
+	UAnimMontage* GetUpBackMontage;
 };
+
+
 
 
 

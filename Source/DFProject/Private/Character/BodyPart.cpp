@@ -22,6 +22,9 @@ ABodyPart::ABodyPart()
 	HandConstraint->SetAngularTwistLimit(EAngularConstraintMotion::ACM_Locked, 45.f);
 
 	HandConstraint->SetDisableCollision(true);
+
+	SetReplicates(true);
+	SetReplicateMovement(true);
 }
 
 // Called when the game starts or when spawned
@@ -31,9 +34,11 @@ void ABodyPart::BeginPlay()
 	
 	BodyCollider->SetHiddenInGame(false);
 	BodyCollider->SetVisibility(true);
+	
+	
 }
 
-void ABodyPart::Attach(ACharacter* TargetCharacter, const UAttachInfoComponent* AttachInfo)
+void ABodyPart::Attach_Implementation(ACharacter* TargetCharacter, const UAttachInfoComponent* AttachInfo)
 {
 	if (!TargetCharacter) return;
 	
@@ -60,6 +65,11 @@ void ABodyPart::Attach(ACharacter* TargetCharacter, const UAttachInfoComponent* 
 	// BodyCollider와 메시를 연결
 	HandConstraint->AttachToComponent(Mesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, BoneToAttach);
 	HandConstraint->SetConstrainedComponents(BodyCollider, NAME_None, Mesh, BoneToAttach);
+}
+
+void ABodyPart::Server_ApplyImpulse_Implementation()
+{
+	
 }
 
 void ABodyPart::ApplyImpulse()
