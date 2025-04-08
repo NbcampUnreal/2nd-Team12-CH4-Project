@@ -41,7 +41,7 @@ EBTNodeResult::Type UBTTask_Attack::ExecuteTask(UBehaviorTreeComponent& OwnerCom
 
 	float Distance = BlackboardComp->GetValueAsFloat(TEXT("DistanceToTarget"));
 	LOG(Log, TEXT("Attack Task : DistanceToTarget = %f"), Distance);
-
+	
 	return EBTNodeResult::Succeeded;
 }
 
