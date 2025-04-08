@@ -73,7 +73,6 @@ void UBTService_UpdateState::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* 
 	}
 	else
 	{
-		// 적을 찾지 못한 경우
 		BlackboardComp->ClearValue(TEXT("TargetActor"));
 		BlackboardComp->SetValueAsFloat(DistanceKey, 0.f);
 		BlackboardComp->SetValueAsBool(IsInAttackRangeKey, false);
