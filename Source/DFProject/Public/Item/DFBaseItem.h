@@ -1,26 +1,45 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/Actor.h"
+#include "Engine/DataAsset.h"
 #include "DFBaseItem.generated.h"
 
+UENUM(BlueprintType)
+enum class EItemType : uint8
+{
+	Melee,
+	Firearm,
+	Survive,
+	Wearable,
+	Effect,
+};
+
 UCLASS()
-class DFPROJECT_API ADFBaseItem : public AActor
+class DFPROJECT_API UDFBaseItem : public UPrimaryDataAsset
 {
 	GENERATED_BODY()
 	
 public:	
-	// Sets default values for this actor's properties
-	ADFBaseItem();
+	UPROPERTY(EditAnywhere, Category = "Item")
+	FName ItemID;
 
-protected:
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
+	UPROPERTY(EditAnywhere, Category = "Item")
+	FText DisplayItemName;
 
-public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
+	UPROPERTY(EditAnywhere, Category = "Item")
+	EItemType ItemType;
 
+	UPROPERTY(EditAnywhere, Category = "Item")
+	USkeletalMesh* ItemMesh;
+
+	UPROPERTY(EditAnywhere, Category = "Item")
+	FName EquipSocketName;
+
+	UPROPERTY(EditAnywhere, Category = "Item")
+	FPrimaryAssetType AssetType;
+
+	UFUNCTION(BlueprintCallable, Category = "Item")
+	FText GetDisplayItemName() const;
+
+	virtual FPrimaryAssetId GetPrimaryAssetId() const override;
 };
