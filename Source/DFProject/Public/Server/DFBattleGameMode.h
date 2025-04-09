@@ -19,6 +19,7 @@ enum class EBattleGameState : uint8
     InProgress  UMETA(DisplayName = "InProgress"),
     SuddenDeath UMETA(DisplayName = "SuddenDeath"),
     Ended       UMETA(DisplayName = "Ended")
+
 };
 
 // 게임 상태 변경 시 발생시킬 이벤트 (블루프린트와 연동 가능)
@@ -35,14 +36,6 @@ public:
     virtual void BeginPlay() override;
     virtual void Tick(float DeltaSeconds) override;
 
-    // 라운드 전체 시간을 초 단위로 설정 (기본값 300초; 예: 5분)
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Game Settings")
-    float RoundTime;
-
-    // 현재 남은 시간을 나타냄
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Game Settings")
-    float CurrentTime;
-
     // 현재 게임 진행 상태 (서버에서만 관리됨)
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Game Settings")
     EBattleGameState CurrentGameState;
@@ -51,28 +44,28 @@ public:
     UPROPERTY(BlueprintAssignable, Category = "Events")
     FOnGameModeStateChangedSignature OnGameStateChanged;
 
-    // 예제용: 게임 내 점수를 관리할 변수 (실제 구현시 플레이어별 혹은 팀별로 관리)
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Game Settings")
-    int32 Score;
-
-    // 1초마다 호출되어 게임의 진행 시간을 업데이트하고 상태를 체크함
-    UFUNCTION(BlueprintCallable, Category = "GameMode")
-    virtual void UpdateGameState();
-
-    // 서든데스 모드로 전환 시 호출되는 함수 (특수 룰, 효과, UI 업데이트 등 추가)
-    UFUNCTION(BlueprintCallable, Category = "GameMode")
-    virtual void HandleSuddenDeath();
-
     // 게임 종료 시 호출되는 함수 (승리자 결정, 결과 전달 등)
     UFUNCTION(BlueprintCallable, Category = "GameMode")
     virtual void EndGame();
 
-    // 플레이어 사망 처리 함수 (데미지를 받고 캐릭터가 사망했을 때 호출)
+    // 플레이어가 장외 상태일 때 호출되는 함수
     UFUNCTION(BlueprintCallable, Category = "Combat")
-    virtual void HandlePlayerDeath(AActor* DeadActor, AController* Killer);
+    virtual void HandlePlayerOutOfBounds(APawn* Pawn);
+
+    // 남아있는 살아있는 플레이어 수 체크 함수 (서바이벌 종료 조건)
+    UFUNCTION(BlueprintCallable, Category = "GameMode")
+    virtual void CheckRemainingPlayers();
+
+    // 게임 시작 후 그레이스 피리어드 (초 단위): 이 시간 동안 체크를 건너뜁니다.
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Game Settings")
+    float GracePeriod;
 
 protected:
-    // 타이머 핸들러: 일정 주기마다 UpdateGameState 호출
+    // 게임이 시작된 시간을 저장 (초 단위)
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Game Settings")
+    float GameStartTime;
+
+    // 타이머 핸들러: 추가 업데이트가 필요한 경우
     FTimerHandle GameStateTimerHandle;
 
     // 안전하게 게임 상태를 변경하는 내부 함수 (변경 시 이벤트도 발생)

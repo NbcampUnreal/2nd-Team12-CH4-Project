@@ -1,4 +1,5 @@
 ﻿#include "Server/DFBattleGameMode.h"
+#include "Server/DFBattleGameState.h"
 #include "TimerManager.h"
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
@@ -9,110 +10,133 @@ ADFBattleGameMode::ADFBattleGameMode()
 {
     PrimaryActorTick.bCanEverTick = true;
 
-    RoundTime = 300.f;       // 전체 게임 시간 (예: 300초)
-    CurrentTime = RoundTime; // 시작 시 남은 시간 = 전체 게임 시간
     CurrentGameState = EBattleGameState::Waiting;
-    Score = 0;
+
+    // 그레이스 피리어드 (예: 10초 동안 체크하지 않음)
+    GracePeriod = 10.f;
+    GameStartTime = 0.f;  // BeginPlay()에서 설정할 예정
 }
 
 void ADFBattleGameMode::BeginPlay()
 {
     Super::BeginPlay();
 
+    // 게임 시작 시 현재 시간을 기록
+    GameStartTime = GetWorld()->GetTimeSeconds();
+
     // 모든 초기화가 완료되면 게임 상태를 InProgress로 전환
     SetGameState(EBattleGameState::InProgress);
-
-    // 1초 간격으로 UpdateGameState 함수를 호출하는 타이머 시작
-    GetWorldTimerManager().SetTimer(GameStateTimerHandle, this, &ADFBattleGameMode::UpdateGameState, 1.0f, true);
 }
 
 void ADFBattleGameMode::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
-    // 추가적인 프레임 단위 업데이트 로직 추가 가능
-}
 
-void ADFBattleGameMode::UpdateGameState()
-{
-    if (CurrentGameState == EBattleGameState::InProgress)
+    // 서바이벌 모드에서는 매 프레임마다 플레이어들의 Pawn 위치를 확인합니다.
+    for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
     {
-        // 매 호출마다 남은 시간 1초씩 감소
-        CurrentTime -= 1.0f;
-
-        // 남은 시간이 0 이하가 되면 시간 초과 처리
-        if (CurrentTime <= 0)
+        APlayerController* PC = It->Get();
+        if (!PC)
         {
-            SetGameState(EBattleGameState::SuddenDeath);
-            HandleSuddenDeath();
-            
+            UE_LOG(LogTemp, Warning, TEXT("Tick(): 유효하지 않은 PlayerController"));
+            continue;
+        }
+
+        APawn* Pawn = PC->GetPawn();
+        if (!Pawn || !IsValid(Pawn)) // Pawn의 유효성을 검사
+        {
+            continue;
         }
     }
 
-    // 추가: 게임 도중 점수 변경, 플레이어 상태 체크 등 다른 로직을 여기서 구현 가능
-}
+    // 그레이스 피리어드 이후에 살아있는 플레이어 수 체크
+    float ElapsedTime = GetWorld()->GetTimeSeconds() - GameStartTime;
+    if (ElapsedTime > GracePeriod)
+    {
+        CheckRemainingPlayers();
+    }
 
-void ADFBattleGameMode::HandleSuddenDeath()
-{
-    // 서든데스 모드 진입 시 관련 로직을 구현
-    UE_LOG(LogTemp, Warning, TEXT("서든데스 모드 시작! 첫 공격 시 승패 결정"));
-    // 서든데스 전용 타이머 재설정, UI 알림 등 추가 로직 구현 가능
 }
 
 void ADFBattleGameMode::EndGame()
 {
-    // 게임 종료 상태 전환 및 타이머 정리
+    // 이미 종료 상태이면 중복 호출 방지
+    if (CurrentGameState == EBattleGameState::Ended)
+    {
+        return;
+    }
+
     SetGameState(EBattleGameState::Ended);
-    GetWorldTimerManager().ClearTimer(GameStateTimerHandle);
 
-    UE_LOG(LogTemp, Warning, TEXT("게임 종료 - 개인전 최종 점수 표시"));
+    UE_LOG(LogTemp, Warning, TEXT("게임 종료"));
 
-    // 모든 플레이어의 최종 점수를 출력하여 최종 순위를 결정하는 예제
+    // 최종 승자(생존자) 정보를 GameState에 업데이트합니다.
+    // GameState는 서버와 클라이언트에 모두 존재하므로,
+    // 복제된 FinalWinnerName 변수를 HUD 등에서 읽어 최종 결과를 표시할 수 있습니다.
+    ADFBattleGameState* MyGS = GetGameState<ADFBattleGameState>();
+    if (MyGS)
+    {
+        TArray<APlayerController*> AliveControllers;
+        for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+        {
+            APlayerController* PC = It->Get();
+            if (PC && IsValid(PC->GetPawn()))
+            {
+                AliveControllers.Add(PC);
+            }
+        }
+        if (AliveControllers.Num() == 1)
+        {
+            FString WinnerName = AliveControllers[0]->PlayerState ? AliveControllers[0]->PlayerState->GetPlayerName() : TEXT("Unknown");
+            MyGS->FinalWinnerName = WinnerName;
+        }
+        else
+        {
+            MyGS->FinalWinnerName = TEXT("No Winner");
+        }
+        UE_LOG(LogTemp, Warning, TEXT("최종 승자: %s"), *MyGS->FinalWinnerName);
+    }
+
+    // 이후 클라이언트의 HUD/UMG 위젯이 GameState의 복제된 FinalWinnerName를 통해 결과를 표시하게 하면 됩니다.
+}
+
+void ADFBattleGameMode::HandlePlayerOutOfBounds(APawn* Pawn)
+{
+    // Pawn이 유효하지 않으면 바로 반환
+    if (!Pawn || !IsValid(Pawn))
+        return;
+
+    UE_LOG(LogTemp, Log, TEXT("HandlePlayerOutOfBounds: Eliminating player %s"), *Pawn->GetName());
+
+    AController* Controller = Pawn->GetController();
+    if (Controller && IsValid(Controller))
+    {
+        Controller->UnPossess();
+    }
+
+    // 추가 정리(예: PlayerState 업데이트)가 필요한 경우 여기에 구현 가능
+    Pawn->Destroy();
+}
+
+void ADFBattleGameMode::CheckRemainingPlayers()
+{
+    int32 AliveCount = 0;
     for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
     {
         APlayerController* PC = It->Get();
-        if (PC && PC->PlayerState)
+        if (PC && IsValid(PC->GetPawn()))
         {
-            ADFPlayerState* PS = Cast<ADFPlayerState>(PC->PlayerState);
-            if (PS)
-            {
-                UE_LOG(LogTemp, Warning, TEXT("플레이어 %s 최종 점수: %d"), *PS->GetPlayerName(), PS->IndividualScore);
-            }
+            AliveCount++;
         }
     }
 
-    // 추가: 최종 순위에 따라 승리자 표시, 결과 화면 전환 등을 구현할 수 있습니다.
-}
+    UE_LOG(LogTemp, Verbose, TEXT("남은 플레이어 수: %d"), AliveCount);
 
-void ADFBattleGameMode::HandlePlayerDeath(AActor* DeadActor, AController* Killer)
-{
-    if (!DeadActor)
-        return;
-
-    UE_LOG(LogTemp, Log, TEXT("플레이어 %s 사망, Killer: %s"),
-        *DeadActor->GetName(),
-        (Killer ? *Killer->GetName() : TEXT("Unknown")));
-
-    // 개인전에서는 팀 점수가 아니라, 각 Killer의 점수를 개별적으로 업데이트합니다.
-    if (Killer && Killer->PlayerState)
+    // 만약 살아있는 플레이어가 1명 이하이고 게임 상태가 진행 중이면 게임 종료
+    if (AliveCount <= 1 && CurrentGameState == EBattleGameState::InProgress)
     {
-        ADFPlayerState* KillerPS = Cast<ADFPlayerState>(Killer->PlayerState);
-        if (KillerPS)
-        {
-            KillerPS->IndividualScore++;  // Killer의 개인 점수 증가
-            UE_LOG(LogTemp, Log, TEXT("플레이어 %s의 점수 업데이트: %d"), *KillerPS->GetPlayerName(), KillerPS->IndividualScore);
-        }
-    }
-
-    // 사망한 플레이어에 대해 리스폰 로직을 추가할 수 있습니다.
-    // 여기서는 간단한 예로, 사망한 플레이어를 즉시 리스폰합니다.
-    AController* DeadController = nullptr;
-    if (APawn* Pawn = Cast<APawn>(DeadActor))
-    {
-        DeadController = Pawn->GetController();
-    }
-    if (DeadController)
-    {
-        RestartPlayer(DeadController);
+        UE_LOG(LogTemp, Warning, TEXT("마지막 플레이어 남음. 게임 종료."));
+        EndGame();
     }
 }
 
