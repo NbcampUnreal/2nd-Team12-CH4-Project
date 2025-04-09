@@ -3,9 +3,11 @@
 
 #include "Character/BodyPart/BodyPart.h"
 
+#include "Ability/AbilityStrategy.h"
 #include "Character/BodyPart/AttachInfoComponent.h"
 #include "Components/SphereComponent.h"
 #include "GameFramework/Character.h"
+#include "Kismet/GameplayStatics.h"
 #include "PhysicsEngine/PhysicsConstraintComponent.h"
 
 // Sets default values
@@ -14,17 +16,20 @@ ABodyPart::ABodyPart()
 	PrimaryActorTick.bCanEverTick = false;
 	BodyCollider = CreateDefaultSubobject<USphereComponent>(TEXT("BodyCollider"));
 	SetRootComponent(BodyCollider);
+	BodyCollider->SetCollisionProfileName(TEXT("BodyPartAttack"));
+	BodyCollider->OnComponentBeginOverlap.AddDynamic(this, &ABodyPart::OnAttackOverlap);
 
-	HandConstraint = CreateDefaultSubobject<UPhysicsConstraintComponent>(TEXT("HandConstraint"));
+	BoneConstraint = CreateDefaultSubobject<UPhysicsConstraintComponent>(TEXT("HandConstraint"));
 
-	HandConstraint->SetAngularSwing1Limit(EAngularConstraintMotion::ACM_Locked, 45.f);
-	HandConstraint->SetAngularSwing2Limit(EAngularConstraintMotion::ACM_Locked, 45.f);
-	HandConstraint->SetAngularTwistLimit(EAngularConstraintMotion::ACM_Locked, 45.f);
+	BoneConstraint->SetAngularSwing1Limit(EAngularConstraintMotion::ACM_Locked, 45.f);
+	BoneConstraint->SetAngularSwing2Limit(EAngularConstraintMotion::ACM_Locked, 45.f);
+	BoneConstraint->SetAngularTwistLimit(EAngularConstraintMotion::ACM_Locked, 45.f);
 
-	HandConstraint->SetDisableCollision(true);
+	BoneConstraint->SetDisableCollision(true);
 
 	SetReplicates(true);
 	SetReplicateMovement(true);
+
 }
 
 // Called when the game starts or when spawned
@@ -36,6 +41,15 @@ void ABodyPart::BeginPlay()
 	BodyCollider->SetVisibility(true);
 	
 	
+}
+
+void ABodyPart::PerformAttack()
+{
+	//if (!BodyCollider) return;
+	//SaveAttackTime();
+	//ApplyImpulse();
+
+	if (CurrentAttackStrategy) CurrentAttackStrategy->StartAbility_Implementation(this);
 }
 
 void ABodyPart::Attach_Implementation(ACharacter* TargetCharacter, const UAttachInfoComponent* AttachInfo)
@@ -63,19 +77,19 @@ void ABodyPart::Attach_Implementation(ACharacter* TargetCharacter, const UAttach
 	BodyCollider->SetMassOverrideInKg(NAME_None, 5.f, true);
 
 	// BodyCollider와 메시를 연결
-	HandConstraint->AttachToComponent(Mesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, BoneToAttach);
-	HandConstraint->SetConstrainedComponents(BodyCollider, NAME_None, Mesh, BoneToAttach);
-}
-
-void ABodyPart::Server_ApplyImpulse_Implementation()
-{
-	
+	BoneConstraint->AttachToComponent(Mesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, BoneToAttach);
+	BoneConstraint->SetConstrainedComponents(BodyCollider, NAME_None, Mesh, BoneToAttach);
 }
 
 void ABodyPart::ApplyImpulse()
 {
 	FVector ImpulseDirection = OwningCharacter->GetActorForwardVector() * ImpulsePower; // 방향도 매개변수로 받을까 고민
 	BodyCollider->AddImpulse(ImpulseDirection, NAME_None, true);
+}
+
+void ABodyPart::SetAttackStrategy(UAbilityStrategy* NewStrategy)
+{
+	CurrentAttackStrategy = NewStrategy;
 }
 
 FTransform ABodyPart::GetOffsetTransform(const ACharacter* TargetCharacter, const UAttachInfoComponent* AttachInfo)
@@ -96,3 +110,61 @@ FTransform ABodyPart::GetOffsetTransform(const ACharacter* TargetCharacter, cons
 	return AttachInfoTransform.GetRelativeTransform(BoneWorldTransform);
 }
 
+void ABodyPart::OnAttackOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp,
+	int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	float CurrentTime = GetWorld()->GetTimeSeconds();
+	
+	if (CurrentTime - LastAttackTime > AttackValidDuration) return;
+	
+	if (!OtherActor || OtherActor == OwningCharacter) return;
+
+	if (const ABodyPart* OtherBodyPart = Cast<ABodyPart>(OtherActor))
+	{
+		// 같은 캐릭터의 바디 파츠인지 확인
+		if (OtherBodyPart->OwningCharacter == OwningCharacter)
+		{
+			return; // 자기 몸의 바디파츠면 무시
+		}
+	}
+	
+	if (UPrimitiveComponent* HitComp = Cast<UPrimitiveComponent>(OtherComp))
+	{
+		// 충돌 방향
+		FVector Dir = (OtherActor->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+
+		// 공격자의 속도 기반으로 충격량 추정 (속도 * 질량)
+		FVector Velocity = BodyCollider->GetComponentVelocity();
+		float ImpactForce = Velocity.Size() * VirtualMass;
+
+		// 충격 방향으로 임펄스 적용
+		//HitComp->AddImpulse(Dir * ImpactForce, NAME_None, true);
+
+		ACharacter* HitCharacter = Cast<ACharacter>(OtherActor);
+
+		if (!HitCharacter)
+		{
+			// 바디 파츠일 경우, OwningCharacter를 대신 참조
+			if (const ABodyPart* OtherBodyPart = Cast<ABodyPart>(OtherActor))
+			{
+				HitCharacter = OtherBodyPart->OwningCharacter;
+			}
+		}
+
+		if (HitCharacter && HitCharacter != OwningCharacter)
+		{
+			UGameplayStatics::ApplyDamage(
+				HitCharacter,
+				ImpactForce * 0.0002f,
+				OwningCharacter->GetController(),
+				this,
+				UDamageType::StaticClass()
+			);
+		}
+	}
+}
+
+void ABodyPart::SaveAttackTime()
+{
+	LastAttackTime = GetWorld()->GetTimeSeconds();
+}

@@ -4,6 +4,8 @@
 #include "Character/DFCharacter.h"
 
 #include "EnhancedInputComponent.h"
+#include "Ability/HeadbuttAbilityStrategy.h"
+#include "Ability/PunchAbilityStrategy.h"
 #include "Camera/CameraComponent.h"
 #include "Character/BodyPart/BodyPart.h"
 #include "Character/BodyPart/AttachInfoComponent.h"
@@ -66,41 +68,53 @@ void ADFCharacter::Tick(float DeltaTime)
 
 			FRotator TargetRotator;
 			TargetRotator.Yaw = InitialRotator.Yaw;
-			TargetRotator.Pitch = MeshOffsetRotator.Pitch;
-			TargetRotator.Roll = MeshOffsetRotator.Roll;
+			TargetRotator.Pitch = 0;
+			TargetRotator.Roll = 0;
 
 			FQuat TargetQuat = TargetRotator.Quaternion();
 
 			// 회복 알파 계산 (0에서 1로 서서히 증가)
 			RecoverAlpha = FMath::Clamp(RecoverAlpha + DeltaTime * RecoverSpeed, 0.f, 1.f);
 
-			// 부드럽게 회전 보간
-			FQuat BlendedQuat = FQuat::Slerp(CurrentQuat, TargetQuat, RecoverAlpha);
-			FQuat DeltaQuat = BlendedQuat * CurrentQuat.Inverse();
+			// 목표 회전과 현재 회전 차이 계산 (이게 실제 회복 체크 기준)
+			FQuat DeltaQuat = TargetQuat * CurrentQuat.Inverse();
 			DeltaQuat.Normalize();
 
 			FVector Axis;
 			float Angle;
 			DeltaQuat.ToAxisAndAngle(Axis, Angle);
 
-			if (Angle > KINDA_SMALL_NUMBER)
+			// 회복 알파 계산 (0에서 1로 서서히 증가)
+			RecoverAlpha = FMath::Clamp(RecoverAlpha + DeltaTime * RecoverSpeed, 0.f, 1.f);
+
+			// 부드럽게 회전 보간해서 Torque 방향 설정
+			FQuat BlendedQuat = FQuat::Slerp(CurrentQuat, TargetQuat, RecoverAlpha);
+			FQuat TorqueQuat = BlendedQuat * CurrentQuat.Inverse();
+			TorqueQuat.Normalize();
+
+			FVector TorqueAxis;
+			float TorqueAngle;
+			TorqueQuat.ToAxisAndAngle(TorqueAxis, TorqueAngle);
+
+			if (TorqueAngle > KINDA_SMALL_NUMBER)
 			{
-				FVector Torque = Axis * Angle * 100.0f; //Torque Strength로 변수화 해야함
+				FVector Torque = TorqueAxis * TorqueAngle * 5000.0f; // Strength 조절 가능
 				SMesh->AddTorqueInRadians(Torque, NAME_None, true);
 			}
 
-			// 정렬되었으면 회복 완료
-			const float AngleThreshold = 2.0f * (PI / 180.0f); // 2도
-			if (Angle < AngleThreshold)
+			// Angle 로그 찍기 (실제 Target과의 차이)
+			const float AngleThreshold = 2.0f * (PI / 180.0f);
+			UE_LOG(LogTemp, Log, TEXT("[Recovery] Current Angle: %.2f degrees / Threshold: %.2f degrees"), 
+				FMath::RadiansToDegrees(Angle), 
+				FMath::RadiansToDegrees(AngleThreshold));
+
+			if (Angle < AngleThreshold || RecoverAlpha > 0.95f)
 			{
 				FinishGetUp();
 				bIsRecovering = false;
 				RecoverAlpha = 0.f;
 			}
 		}
-
-		// 부드러운 회복 힘 증폭
-		RecoverAlpha = FMath::Min(RecoverAlpha + DeltaTime * RecoverSpeed, 1.0f);
 	}
 	
 	if (!bIsStunned) return;
@@ -115,7 +129,6 @@ void ADFCharacter::Tick(float DeltaTime)
 	TargetRotation.Pitch = 0.0f;
 	TargetRotation.Roll = 0.0f;
 	SetActorRotation(TargetRotation);
-
 }
 
 // Called to bind functionality to input
@@ -294,14 +307,22 @@ void ADFCharacter::Server_Headbutt_Implementation()
 	
 	if (!BodyParts.Contains(EBodyPartType::Head) || !BodyParts[EBodyPartType::Head]) return;
 
-	BodyParts[EBodyPartType::Head]->ApplyImpulse();
+	UAbilityStrategy* PunchStrategy = NewObject<UHeadbuttAbilityStrategy>(this); // this = Outer
+
+	BodyParts[EBodyPartType::Head]->SetAttackStrategy(PunchStrategy);
+	BodyParts[EBodyPartType::Head]->PerformAttack();
 }
 
 
 void ADFCharacter::StartJump(const FInputActionValue& Value)
 {
-	if (bIsStunned) return;
-	Jump();
+	if (bIsStunned)
+	{
+		RecoverHandleInput(); // 연타 처리 함수
+		return;
+	}
+	
+	Super::Jump();
 }
 
 void ADFCharacter::SpawnBodyParts()
@@ -341,11 +362,13 @@ void ADFCharacter::Server_Punch_Implementation()
 {
 	if (bIsStunned) return;
 	if (!BodyParts.Contains(EBodyPartType::LeftFist) || !BodyParts.Contains(EBodyPartType::RightFist)) return;
-	if (!BodyParts[EBodyPartType::LeftFist] || !BodyParts[EBodyPartType::RightFist]) return;
-	
-	
-	if (bLeft) BodyParts[EBodyPartType::LeftFist]->ApplyImpulse();
-	else BodyParts[EBodyPartType::RightFist]->ApplyImpulse();
+
+	ABodyPart* Fist = bLeft ? BodyParts[EBodyPartType::LeftFist] : BodyParts[EBodyPartType::RightFist];
+	if (!Fist) return;
+	UAbilityStrategy* PunchStrategy = NewObject<UPunchAbilityStrategy>(this); // this = Outer
+
+	Fist->SetAttackStrategy(PunchStrategy);
+	Fist->PerformAttack();
 
 	bLeft = !bLeft;	
 }
@@ -365,13 +388,17 @@ void ADFCharacter::Stun()
 	
 	auto SMesh = GetMesh();
 	SMesh->bPauseAnims = true;
-	SMesh->SetSimulatePhysics(true); // 메시에 피직스 적용
+	SMesh->SetSimulatePhysics(true); // 메시에 피직스 적용 (모두 다)
 	PhysicalAnimComp->SetStrengthMultiplyer(0.0f); // 완전한 래그돌처럼 보이기 위해 래그돌 비율을 최대로
 	bIsStunned = true;
+
+	GetWorldTimerManager().SetTimer(RecoverTimer, this, &ADFCharacter::RecoverStart, 5.f, false);
 }
 
-void ADFCharacter::RecoverFromStun()
+void ADFCharacter::RecoverStart()
 {
+	if (bIsRecovering) return;
+	
 	PhysicalAnimComp->SetStrengthMultiplyer(0.0f);
 	bIsRecovering = true;
 	RecoverAlpha = 0.0f;
@@ -388,19 +415,46 @@ void ADFCharacter::FinishGetUp()
 	PhysicalAnimComp->SetStrengthMultiplyer(0.5f);
 	SMesh->SetRelativeTransform(MeshOffset);
 	GetMesh()->SetAllBodiesBelowSimulatePhysics(PhysicalAnimStartBone, true, false);
-	
+
+	HP = MaxHP;
 	SMesh->bPauseAnims = false;
 	bIsStunned = false;
+}
 
-	//FVector Up = GetMesh()->GetUpVector();
-	//
-	//if (FVector::DotProduct(Up, FVector::UpVector) < 0.f)
-	//{
-	//	PlayAnimMontage(GetUpFrontMontage);
-	//}
-	//else
-	//{
-	//	PlayAnimMontage(GetUpBackMontage);		
-	//}
+void ADFCharacter::RecoverHandleInput()
+{
+	if (!bIsStunned) return;
+
+	RecoverInputCount++;
+
+	if (RecoverInputCount >= RecoverInputGoal)
+	{
+		GetWorldTimerManager().ClearTimer(RecoverTimer);
+		RecoverStart();
+	}
+}
+
+float ADFCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator,
+	AActor* DamageCauser)
+{
+	Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+
+	float DamageApplied = FMath::Min(HP, DamageAmount);
+	HP -= DamageApplied;
+
+	UE_LOG(LogTemp, Log, TEXT("[%s] 데미지 받음: %.2f, 남은 HP: %.2f (가해자: %s)"),
+		*GetName(), DamageApplied, HP - DamageApplied,
+		DamageCauser ? *DamageCauser->GetName() : TEXT("알 수 없음"));
 	
+	if (bIsStunned) return DamageApplied;
+
+	HP -= DamageApplied;
+
+	if (HP <= 0.f)
+	{
+		HP = 0.f;
+		Stun();
+	}
+
+	return DamageApplied;
 }

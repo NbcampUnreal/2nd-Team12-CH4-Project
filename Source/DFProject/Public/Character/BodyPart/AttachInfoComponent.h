@@ -18,8 +18,6 @@ class DFPROJECT_API UAttachInfoComponent : public USceneComponent
 public:
 	UAttachInfoComponent();
 	
-	float GetRadius() const;
-	
 	// 오프셋은 타겟 본 위치와 이 컴포넌트의 위치의 차이로 구함.
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attach Info")
@@ -33,7 +31,6 @@ public:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attach Info")
 	bool bAutoSpawnBeginPlay = true;
-
 	
 	UPROPERTY(EditAnywhere, Category="Attach Info")
 	TObjectPtr<USphereComponent> PreviewCollider;

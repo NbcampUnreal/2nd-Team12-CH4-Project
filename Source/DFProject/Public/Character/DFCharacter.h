@@ -23,17 +23,17 @@ class DFPROJECT_API ADFCharacter : public ACharacter
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this character's properties
 	ADFCharacter();
 
 protected:
-	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;  
 public:	
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+
+	////// 캐릭터 액션
 	void Move(const FInputActionValue& Value);
 	
 	UFUNCTION(Server, Reliable) // 반드시 반영해야해서 Reliable로 했는데 잘 모르겠음.
@@ -41,13 +41,11 @@ public:
 
 	UFUNCTION(NetMulticast, Unreliable)
 	void Multicast_Move(const FRotator& Rotation);
-
 	
 	void Punch(const FInputActionValue& Value);
 
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void Server_Punch();
-
 	
 	void Sprint(const FInputActionValue& Value); //  CharacterMovement의 스피드 올리기 (이건 자동 리플), 달리기 이펙트 생성
 	
@@ -58,37 +56,43 @@ public:
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void Server_Grab();
 	
-	
-
 	void DropKick(const FInputActionValue& Value);
 
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void Server_DropKick();
 	
-	
 	void StartJump(const FInputActionValue& Value);
-
 	
 	void Headbutt(const FInputActionValue& Value);
 
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void Server_Headbutt();
+	///////
+
 	
-	
+	////// 캐릭터 세팅
 	UFUNCTION(BlueprintCallable, Category="PhysicalAnimation")
 	void SpawnBodyParts();
-
+	
 	UFUNCTION(BlueprintCallable, Category="PhysicalAnimation")
 	void ApplyPhysicalAnimationSettings();
+	///////
+	
 
+	///// 스턴 관련 함수
 	UFUNCTION(BlueprintCallable, Category="PhysicalAnimation")
 	void Stun();
 	
 	UFUNCTION(BlueprintCallable, Category="PhysicalAnimation")
-	void RecoverFromStun();
+	void RecoverStart();
 
 	UFUNCTION(BlueprintCallable, Category="PhysicalAnimation")
 	void FinishGetUp();
+
+	void RecoverHandleInput();
+	///////
+	
+	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category=Camera)
 	TObjectPtr<USpringArmComponent> SpringArm;
@@ -154,19 +158,12 @@ public:
 	bool bIsStunned = false;
 	bool bIsRecovering = false;
 	float RecoverAlpha = 0.0f;
-	float RecoverSpeed = 0.5f;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Animations")
-	UAnimMontage* GetUpFrontMontage;
+	float RecoverSpeed = 0.8f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Animations")
-	UAnimMontage* GetUpBackMontage;
+	float MaxHP = 100.0f;
+	float HP = 100.0f;
+
+	FTimerHandle RecoverTimer;
+	int32 RecoverInputCount = 0;
+	int32 RecoverInputGoal = 0;
 };
-
-
-
-
-
-
-
-

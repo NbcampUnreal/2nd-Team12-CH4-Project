@@ -3,6 +3,7 @@
 
 #include "Character/BodyPart/AttachInfoComponent.h"
 
+#include "Components/ShapeComponent.h"
 #include "Components/SphereComponent.h"
 
 UAttachInfoComponent::UAttachInfoComponent()
@@ -14,9 +15,4 @@ UAttachInfoComponent::UAttachInfoComponent()
 	PreviewCollider->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	PreviewCollider->SetHiddenInGame(true);
 	PreviewCollider->bIsEditorOnly = true;
-}
-
-float UAttachInfoComponent::GetRadius() const
-{
-	return PreviewCollider ? PreviewCollider->GetScaledSphereRadius() : 0.0f;
 }
