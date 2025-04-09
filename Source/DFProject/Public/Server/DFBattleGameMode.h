@@ -67,12 +67,13 @@ public:
     UFUNCTION(BlueprintCallable, Category = "GameMode")
     virtual void EndGame();
 
+    // 플레이어 사망 처리 함수 (데미지를 받고 캐릭터가 사망했을 때 호출)
+    UFUNCTION(BlueprintCallable, Category = "Combat")
+    virtual void HandlePlayerDeath(AActor* DeadActor, AController* Killer);
+
 protected:
     // 타이머 핸들러: 일정 주기마다 UpdateGameState 호출
     FTimerHandle GameStateTimerHandle;
-
-    // 동점 여부를 판단하는 예제 함수 (실제 점수/플레이어 정보를 이용하여 구현)
-    virtual bool IsTie() const;
 
     // 안전하게 게임 상태를 변경하는 내부 함수 (변경 시 이벤트도 발생)
     virtual void SetGameState(EBattleGameState NewState);
