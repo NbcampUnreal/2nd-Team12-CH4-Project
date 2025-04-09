@@ -6,7 +6,9 @@
 #include "EnhancedInputComponent.h"
 #include "Ability/HeadbuttAbilityStrategy.h"
 #include "Ability/PunchAbilityStrategy.h"
+#include "Ability/Grab/GrabComponent.h"
 #include "Camera/CameraComponent.h"
+#include "Character/BodyPart/AFist.h"
 #include "Character/BodyPart/BodyPart.h"
 #include "Character/BodyPart/AttachInfoComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -276,6 +278,24 @@ void ADFCharacter::Grab(const FInputActionValue& Value)
 void ADFCharacter::Server_Grab_Implementation()
 {
 	if (bIsStunned) return;
+
+	if (!BodyParts.Contains(EBodyPartType::LeftFist) || !BodyParts.Contains(EBodyPartType::RightFist)) return;
+
+	if (AFist* LeftFist = Cast<AFist>(BodyParts[EBodyPartType::LeftFist]))
+	{
+		if (UGrabComponent* GrabComp = LeftFist->FindComponentByClass<UGrabComponent>())
+		{
+			GrabComp->StartGrab();
+		}
+	}
+
+	if (AFist* RightFist = Cast<AFist>(BodyParts[EBodyPartType::RightFist]))
+	{
+		if (UGrabComponent* GrabComp = RightFist->FindComponentByClass<UGrabComponent>())
+		{
+			GrabComp->StartGrab();
+		}
+	}
 }
 
 void ADFCharacter::DropKick(const FInputActionValue& Value)

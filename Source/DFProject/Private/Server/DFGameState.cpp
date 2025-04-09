@@ -1,13 +1,12 @@
-#include "Server/DFGameState.h"
+﻿#include "Server/DFGameState.h"
 #include "Net/UnrealNetwork.h"
 
 ADFGameState::ADFGameState()
 {
-    // �⺻�� ���� (�ʿ信 ���� ����)
     LobbyName = TEXT("Default Lobby");
     LobbyMaxPlayers = 4;
     CurrentPlayerCount = 0;
-    StartCountdown = 10.0f; // ����: 10�� ī��Ʈ�ٿ�
+    StartCountdown = 10.0f;
     bLobbyReady = false;
     PlayerNames = TArray<FString>();
 }

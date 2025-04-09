@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Ability/Grab/Grabbable.h"
 #include "GameFramework/Actor.h"
 #include "BodyPart.generated.h"
 
@@ -25,7 +26,7 @@ enum class EBodyPartType : uint8
 };
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
-class DFPROJECT_API ABodyPart : public AActor
+class DFPROJECT_API ABodyPart : public AActor, public IGrabbable
 {
 	GENERATED_BODY()
 	

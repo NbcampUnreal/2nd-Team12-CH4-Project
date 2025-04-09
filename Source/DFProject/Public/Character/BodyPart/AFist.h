@@ -20,18 +20,13 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-
+	virtual void Tick(float DeltaTime) override;
 public:
-	
-	UFUNCTION(BlueprintCallable, Category="Fist")
-	void Punch();
+	void MoveFistToward(const FVector& TargetLocation);
 	
 	UFUNCTION(BlueprintCallable, Category="Fist")
 	void Grab(AActor* Target);
 
 	UFUNCTION(BlueprintCallable, Category="Fist")
-	void Release();
-	
-	UPROPERTY(EditDefaultsOnly)
-	TObjectPtr<UPhysicsConstraintComponent> GrabConstraint;
+	void ReleaseGrab();
 };
