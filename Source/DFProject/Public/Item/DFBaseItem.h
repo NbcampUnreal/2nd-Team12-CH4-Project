@@ -41,5 +41,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Item")
 	FText GetDisplayItemName() const;
 
+	UFUNCTION(BlueprintCallable, Category = "Item")
+	FName GetItemId() const;
+
 	virtual FPrimaryAssetId GetPrimaryAssetId() const override;
 };

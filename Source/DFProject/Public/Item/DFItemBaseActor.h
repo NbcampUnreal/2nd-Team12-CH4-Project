@@ -46,7 +46,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Item")
 	virtual void SetupItem(UDFItemInstance* NewItemInstance);
 
-
+	UFUNCTION(BlueprintCallable)
+	FName GetCurrentnItemId() const;
 
 protected:
 	virtual void BeginPlay() override;

@@ -10,7 +10,6 @@ ADFItemBaseActor::ADFItemBaseActor()
 
 	ItemMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("RootItemMesh"));
 	SetRootComponent(ItemMesh);
-	ItemMesh->SetMobility(EComponentMobility::Movable);
 	ItemMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	ItemMesh->SetCollisionObjectType(ECC_PhysicsBody);	
 
@@ -27,7 +26,6 @@ ADFItemBaseActor::ADFItemBaseActor()
 	ItemInstance = nullptr;
 
 	bCanBeGrabbed = false;
-
 }
 
 void ADFItemBaseActor::BeginPlay()
@@ -41,14 +39,12 @@ void ADFItemBaseActor::SetupItem(UDFItemInstance* NewInstance)
 	{		
 	ItemInstance = NewInstance;
 	ItemMesh->SetSkeletalMesh(NewInstance->ItemData->ItemMesh);
-	ItemMesh->SetSimulatePhysics(true);
+
 	GripArea->AttachToComponent(ItemMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("HandGripSocket"));
 
-	FVector GripLoc = GripArea->GetComponentLocation();
-	float Radius = GripArea->GetScaledSphereRadius();
-
-	// 디버그용 구체 그리기
-	DrawDebugSphere(GetWorld(), GripLoc, Radius, 16, FColor::Cyan, false, 5.0f);
+	ItemMesh->SetSimulatePhysics(true);
+	ItemMesh->SetAllBodiesBelowSimulatePhysics("Root", false, false);
+	ItemMesh->SetAllBodiesBelowPhysicsBlendWeight("Root", 0.0f, true);
 
 	AttachAbilities();
 	}
@@ -70,8 +66,7 @@ void ADFItemBaseActor::OnGripAreaEndOverlap(
 	UPrimitiveComponent* OverlappedComponent,
 	AActor* OtherActor,
 	UPrimitiveComponent* OtherComp,
-	int32 OtherBodyIndex
-)
+	int32 OtherBodyIndex)
 {
 	bCanBeGrabbed = false;
 }
@@ -92,8 +87,14 @@ void ADFItemBaseActor::AttachAbilities()
 			if (NewAbility)
 			{
 				NewAbility->RegisterComponent();
+				AddInstanceComponent(NewAbility);
+				NewAbility->Activate(true);
 			}
 		}
 	}
 }
 
+FName ADFItemBaseActor::GetCurrentnItemId() const
+{
+	return ItemInstance->ItemData->GetItemId();
+}

@@ -14,7 +14,7 @@ class DFPROJECT_API UDFItemInstance : public UObject
 	GENERATED_BODY()
 	
 public:
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly)
 	UDFBattleItem* ItemData;
 
 	void Initialize(UDFBattleItem* SpawnItemData);
