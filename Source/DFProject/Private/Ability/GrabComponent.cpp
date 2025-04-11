@@ -188,6 +188,10 @@ void UGrabComponent::Released()
 {
 	SetGrabState(EGrabState::Idle);
 	GrabbedTargetInfo = {};
+	if (GrabHandler)
+	{
+		GrabHandler->ReleaseGrab();
+	}
 }
 
 void UGrabComponent::SetGrabHandler(TObjectPtr<UGrabHandler> InGrabHandler)

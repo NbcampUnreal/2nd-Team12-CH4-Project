@@ -9,7 +9,7 @@ UAnimationComponent::UAnimationComponent()
 	PrimaryComponentTick.bCanEverTick = false;
 
 	TimelineComp = CreateDefaultSubobject<UTimelineComponent>(TEXT("Timeline"));
-	TimelineComp->RegisterComponent();
+	//TimelineComp->RegisterComponent();
 }
 
 void UAnimationComponent::BeginPlay()
