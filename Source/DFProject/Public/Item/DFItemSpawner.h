@@ -30,7 +30,7 @@ public:
 	int32 GetSpawnCount() const;
 
 protected:
-	virtual void BeginPlay() override;
+	//virtual void BeginPlay() override;
 	bool bIsValidArea;
 	int32 SpawnCount;
 };
