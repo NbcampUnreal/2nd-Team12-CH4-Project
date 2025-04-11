@@ -430,8 +430,7 @@ void ADFCharacter::SpawnBodyParts()
 
 		for (UAttachInfoComponent* Info : AttachInfos)
 		{
-			if (!Info || !IsValid(Info->BodyPartClass)) continue;
-
+			if (!Info || !IsValid(Info->BodyPartClass) || !Info->bAutoSpawnBeginPlay) continue;
 			FActorSpawnParameters SpawnParams;
 			SpawnParams.Owner = this;
 			SpawnParams.Instigator = GetInstigator();
@@ -445,7 +444,7 @@ void ADFCharacter::SpawnBodyParts()
 			BodyParts.Add(Info->BodyPartType, SpawnedPart);
 		}
 
-		if (LeftGrabComp)
+		if (LeftGrabComp && BodyParts.Contains(EBodyPartType::LeftFist))
 		{
 			UBodyPartGrabHandler* LeftHandler = NewObject<UBodyPartGrabHandler>();
 			LeftHandler->SetOwningGrabComponent(LeftGrabComp);
@@ -458,7 +457,7 @@ void ADFCharacter::SpawnBodyParts()
 		}
 
 		// 오른손 핸들러 생성 및 연결
-		if (RightGrabComp)
+		if (RightGrabComp && BodyParts.Contains(EBodyPartType::RightFist))
 		{
 			UBodyPartGrabHandler* RightHandler = NewObject<UBodyPartGrabHandler>();
 			RightHandler->SetOwningGrabComponent(RightGrabComp);
@@ -513,6 +512,8 @@ void ADFCharacter::Stun()
 	PhysicalAnimComp->SetStrengthMultiplyer(0.0f); // 완전한 래그돌처럼 보이기 위해 래그돌 비율을 최대로
 	bIsStunned = true;
 
+	SetAllBonesMass(500.f);
+
 	GetWorldTimerManager().SetTimer(RecoverTimer, this, &ADFCharacter::RecoverStart, 5.f, false);
 }
 
@@ -535,8 +536,10 @@ void ADFCharacter::FinishGetUp()
 	
 	PhysicalAnimComp->SetStrengthMultiplyer(0.5f);
 	SMesh->SetRelativeTransform(MeshOffset);
-	GetMesh()->SetAllBodiesBelowSimulatePhysics(PhysicalAnimStartBone, true, false);
+	SMesh->SetAllBodiesBelowSimulatePhysics(PhysicalAnimStartBone, true, false);
 
+	SetAllBonesMass(5.f);
+	
 	HP = MaxHP;
 	SMesh->bPauseAnims = false;
 	bIsStunned = false;
@@ -555,8 +558,20 @@ void ADFCharacter::RecoverHandleInput()
 	}
 }
 
+void ADFCharacter::SetAllBonesMass(float InMass)
+{
+	TArray<FName> BoneNames;
+	GetMesh()->GetBoneNames(BoneNames);
+	for (auto& Name : BoneNames)
+	{
+		float Mass = GetMesh()->GetBoneMass(Name);
+		GetMesh()->SetMassOverrideInKg(Name, InMass, true);
+		UE_LOG(LogTemp, Log, TEXT("Bone %s Mass: %.2f"), *Name.ToString(), Mass);
+	}
+}
+
 float ADFCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator,
-	AActor* DamageCauser)
+                               AActor* DamageCauser)
 {
 	Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 

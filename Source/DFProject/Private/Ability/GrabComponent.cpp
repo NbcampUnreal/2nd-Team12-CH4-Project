@@ -79,7 +79,13 @@ void UGrabComponent::DetectClosestGrabbable()
 	{
 		AActor* HitActor = Hit.GetActor();
 		if (!HitActor || !IsValidGrabTarget(HitActor)) continue; //잡을 수 있는 액터 찾기
-
+		
+		AActor* OwnerActor = GetOwner();
+		if (HitActor == OwnerActor || HitActor->GetOwner() == OwnerActor || OwnerActor->GetOwner() == HitActor)
+		{
+			continue;
+		}
+		
 		float DistSq = FVector::DistSquared(Hit.ImpactPoint, GetOwner()->GetActorLocation()); // 액터 위치와의 거리
 		if (DistSq < ClosestDistanceSq) // 가장 가까운 액터 찾기
 		{

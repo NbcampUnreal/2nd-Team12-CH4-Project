@@ -100,6 +100,8 @@ public:
 	void FinishGetUp();
 
 	void RecoverHandleInput();
+
+	void SetAllBonesMass(float InMass);
 	///////
 	
 	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
@@ -176,6 +178,7 @@ public:
 	
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<UGrabComponent> LeftGrabComp;
+
 };
 
 
