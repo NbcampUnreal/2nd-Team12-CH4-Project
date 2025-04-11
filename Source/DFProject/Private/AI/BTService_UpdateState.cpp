@@ -9,10 +9,12 @@
 #include "DFProject.h"
 
 UBTService_UpdateState::UBTService_UpdateState()
+	: AttackRange(500.f)
 {
-	Interval = 0.5f;
 	NodeName = TEXT("UpdateState");
-	AttackRange = 300.f; 
+	Interval = 0.1f;
+
+	TargetKey = TEXT("TargetActor");
 	DistanceKey = TEXT("DistanceToTarget");
 	IsInAttackRangeKey = TEXT("IsInAttackRange");
 }
@@ -20,62 +22,23 @@ UBTService_UpdateState::UBTService_UpdateState()
 void UBTService_UpdateState::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds)
 {
 	AAIController* AIController = OwnerComp.GetAIOwner();
-	if (!AIController)
-	{
-		LOG_ERROR(TEXT("No AIController in UpdateState."));
-		return;
-	}
+	if (!AIController) return;
 
 	ADFCharacter* MyCharacter = Cast<ADFCharacter>(AIController->GetPawn());
-	if (!MyCharacter)
-	{
-		LOG_ERROR(TEXT("No DFCharacter in UpdateState."));
-		return;
-	}
+	if (!MyCharacter) return;
 
 	UBlackboardComponent* BlackboardComp = OwnerComp.GetBlackboardComponent();
-	if (!BlackboardComp)
+	if (!BlackboardComp) return;
+
+	AActor* Target = Cast<AActor>(BlackboardComp->GetValueAsObject(TargetKey));
+	if (!Target)
 	{
-		LOG_ERROR(TEXT("No BlackboardComponent in UpdateState."));
+		BlackboardComp->ClearValue(DistanceKey);
+		BlackboardComp->SetValueAsBool(IsInAttackRangeKey, false);
 		return;
 	}
 
-	TArray<AActor*> FoundEnemy;
-	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ADFCharacter::StaticClass(), FoundEnemy);
-	
-	AActor* NearestEnemy = nullptr;
-	float BestDistance = FLT_MAX;
-
-	for (AActor* Actor : FoundEnemy)
-	{
-		if (Actor == MyCharacter)
-		{
-			continue;
-		}
-
-		float CurrentDistance = FVector::Dist(MyCharacter->GetActorLocation(), Actor->GetActorLocation());
-		if (CurrentDistance < BestDistance)
-		{
-			BestDistance = CurrentDistance;
-			NearestEnemy = Actor;
-		}
-	}
-
-	if (NearestEnemy)
-	{
-		BlackboardComp->SetValueAsObject(TEXT("TargetActor"), NearestEnemy);
-		BlackboardComp->SetValueAsFloat(DistanceKey, BestDistance);
-		BlackboardComp->SetValueAsBool(IsInAttackRangeKey, BestDistance <= AttackRange);
-		LOG(Log, TEXT("UpdateState: Nearest enemy = %s, Distance = %f, InAttackRange = %s"),
-			*NearestEnemy->GetName(),
-			BestDistance,
-			(BestDistance <= AttackRange ? TEXT("true") : TEXT("false")));
-	}
-	else
-	{
-		BlackboardComp->ClearValue(TEXT("TargetActor"));
-		BlackboardComp->SetValueAsFloat(DistanceKey, 0.f);
-		BlackboardComp->SetValueAsBool(IsInAttackRangeKey, false);
-		LOG_WARNING(TEXT("No enemy found in UpdateState."));
-	}
+	const float Distance = FVector::Dist(MyCharacter->GetActorLocation(), Target->GetActorLocation());
+	BlackboardComp->SetValueAsFloat(DistanceKey, Distance);
+	BlackboardComp->SetValueAsBool(IsInAttackRangeKey, Distance <= AttackRange);
 }

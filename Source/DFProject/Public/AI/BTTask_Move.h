@@ -19,5 +19,8 @@ protected:
 
 	virtual void TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds) override;
 
-	bool ShouldJump() const;
+	bool ShouldJump(class ADFCharacter* MyCharacter) const;
+
+private:
+	bool bWasFalling;
 };

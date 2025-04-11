@@ -37,7 +37,7 @@ void ADFAIController::BeginAI(APawn* InPawn)
 		{
 			bool bRunSucceeded = RunBehaviorTree(BehaviorTree);
 
-			TArray<AActor*> FoundActors;
+			/*TArray<AActor*> FoundActors;
 			UGameplayStatics::GetAllActorsOfClass(GetWorld(), ADFCharacter::StaticClass(), FoundActors);
 			AActor* ChosenTarget = nullptr;
 			for (AActor* Actor : FoundActors)
@@ -57,7 +57,7 @@ void ADFAIController::BeginAI(APawn* InPawn)
 			else
 			{
 				LOG_WARNING(TEXT("No valid TargetActor."));
-			}
+			}*/
 			
 			CHECK(bRunSucceeded != BehaviorTree, )
 			LOG(Log, TEXT("Run Behavior Tree"))
