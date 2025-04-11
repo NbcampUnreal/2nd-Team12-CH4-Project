@@ -5,11 +5,6 @@
 
 UDFDeadZoneComponent::UDFDeadZoneComponent()
 {
-    // 이 컴포넌트는 BlueprintSpawnableComponent이므로 에디터에서 추가할 수 있습니다.
-// 기본적으로 UBoxComponent를 사용하므로, 크기나 충돌 프리셋은 에디터에서 조정 가능하지만,
-// 여기서 기본 충돌 설정을 강제할 수 있습니다.
-
-// Overlap 이벤트를 활성화하도록 설정
     SetCollisionEnabled(ECollisionEnabled::QueryOnly);
     SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Overlap);
     SetGenerateOverlapEvents(true);
