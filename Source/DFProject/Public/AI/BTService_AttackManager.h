@@ -4,34 +4,42 @@
 
 #include "CoreMinimal.h"
 #include "BehaviorTree/BTService.h"
-#include "BTService_UpdateState.generated.h"
+#include "BTService_AttackManager.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class DFPROJECT_API UBTService_UpdateState : public UBTService
+class DFPROJECT_API UBTService_AttackManager : public UBTService
 {
 	GENERATED_BODY()
 
 public:
-	UBTService_UpdateState();
+	UBTService_AttackManager();
 
 	virtual void TickNode(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds) override;
-
-	//void UpdateCooldown(UBlackboardComponent* BB, FName LastTimeKey, FName CooldownKey, float Interval);
 
 protected:
 	UPROPERTY(EditAnywhere, Category = "Blackboard")
 	FName TargetKey;
 
 	UPROPERTY(EditAnywhere, Category = "Blackboard")
-	FName DistanceKey;
+	FName SelectedAttackTypeKey;
 
 	UPROPERTY(EditAnywhere, Category = "Blackboard")
-	FName IsInAttackRangeKey;
+	float PunchCooldown;
 
 	UPROPERTY(EditAnywhere, Category = "Blackboard")
-	float AttackRange;
+	float HeadbuttCooldown;
+
+	UPROPERTY(EditAnywhere, Category = "AttackRange")
+	float PunchRange;
+
+	UPROPERTY(EditAnywhere, Category = "AttackRange")
+	float HeadbuttRange;
+
+private:
+	float LastPunchTime;
+	float LastHeadbuttTime;
 	
 };

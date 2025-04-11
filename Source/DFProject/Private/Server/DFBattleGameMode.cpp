@@ -13,7 +13,7 @@ ADFBattleGameMode::ADFBattleGameMode()
     CurrentGameState = EBattleGameState::Waiting;
 
     // 그레이스 피리어드 (예: 10초 동안 체크하지 않음)
-    GracePeriod = 10.f;
+    GracePeriod = 3.f;
     GameStartTime = 0.f;  // BeginPlay()에서 설정할 예정
 }
 
@@ -60,34 +60,47 @@ void ADFBattleGameMode::Tick(float DeltaSeconds)
 
 void ADFBattleGameMode::EndGame()
 {
-    // 이미 종료 상태이면 중복 호출 방지
     if (CurrentGameState == EBattleGameState::Ended)
     {
         return;
     }
 
     SetGameState(EBattleGameState::Ended);
-
     UE_LOG(LogTemp, Warning, TEXT("게임 종료"));
 
-    // 최종 승자(생존자) 정보를 GameState에 업데이트합니다.
-    // GameState는 서버와 클라이언트에 모두 존재하므로,
-    // 복제된 FinalWinnerName 변수를 HUD 등에서 읽어 최종 결과를 표시할 수 있습니다.
+    // 모든 컨트롤러를 순회하여 살아있는 Pawn이 있는 컨트롤러를 찾습니다.
+    TArray<AController*> AliveControllers;
+    for (FConstControllerIterator It = GetWorld()->GetControllerIterator(); It; ++It)
+    {
+        AController* Controller = It->Get();
+        if (Controller && IsValid(Controller->GetPawn()))
+        {
+            AliveControllers.Add(Controller);
+        }
+    }
+
+    // 최종 생존자가 한 명이라면 그 Controller의 이름을, 
+    // 그렇지 않으면 "No Winner"로 설정합니다.
     ADFBattleGameState* MyGS = GetGameState<ADFBattleGameState>();
     if (MyGS)
     {
-        TArray<APlayerController*> AliveControllers;
-        for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
-        {
-            APlayerController* PC = It->Get();
-            if (PC && IsValid(PC->GetPawn()))
-            {
-                AliveControllers.Add(PC);
-            }
-        }
         if (AliveControllers.Num() == 1)
         {
-            FString WinnerName = AliveControllers[0]->PlayerState ? AliveControllers[0]->PlayerState->GetPlayerName() : TEXT("Unknown");
+            FString WinnerName;
+            // AI Controller는 APlayerController가 아닐 수 있으므로, 기본적으로 Pawn의 이름을 사용하거나,
+            // PlayerState가 있다면 그 이름을 사용하는 방법을 고려합니다.
+            if (AliveControllers[0]->PlayerState)
+            {
+                WinnerName = AliveControllers[0]->PlayerState->GetPlayerName();
+            }
+            else if (AliveControllers[0]->GetPawn())
+            {
+                WinnerName = AliveControllers[0]->GetPawn()->GetName();
+            }
+            else
+            {
+                WinnerName = TEXT("Unknown");
+            }
             MyGS->FinalWinnerName = WinnerName;
         }
         else
@@ -97,7 +110,7 @@ void ADFBattleGameMode::EndGame()
         UE_LOG(LogTemp, Warning, TEXT("최종 승자: %s"), *MyGS->FinalWinnerName);
     }
 
-    // 이후 클라이언트의 HUD/UMG 위젯이 GameState의 복제된 FinalWinnerName를 통해 결과를 표시하게 하면 됩니다.
+    // 이후 클라이언트 HUD/UMG 위젯이 GameState의 복제된 FinalWinnerName를 통해 결과를 표시
 }
 
 void ADFBattleGameMode::HandlePlayerOutOfBounds(APawn* Pawn)
@@ -121,10 +134,10 @@ void ADFBattleGameMode::HandlePlayerOutOfBounds(APawn* Pawn)
 void ADFBattleGameMode::CheckRemainingPlayers()
 {
     int32 AliveCount = 0;
-    for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+    for (FConstControllerIterator It = GetWorld()->GetControllerIterator(); It; ++It)
     {
-        APlayerController* PC = It->Get();
-        if (PC && IsValid(PC->GetPawn()))
+        AController* Controller = It->Get();
+        if (Controller && IsValid(Controller->GetPawn()))
         {
             AliveCount++;
         }
@@ -132,7 +145,6 @@ void ADFBattleGameMode::CheckRemainingPlayers()
 
     UE_LOG(LogTemp, Verbose, TEXT("남은 플레이어 수: %d"), AliveCount);
 
-    // 만약 살아있는 플레이어가 1명 이하이고 게임 상태가 진행 중이면 게임 종료
     if (AliveCount <= 1 && CurrentGameState == EBattleGameState::InProgress)
     {
         UE_LOG(LogTemp, Warning, TEXT("마지막 플레이어 남음. 게임 종료."));
