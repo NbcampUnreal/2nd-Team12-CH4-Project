@@ -4,16 +4,16 @@
 #include "Ability/Grab/GrabComponent.h"
 
 #include "Ability/Grab/Grabbable.h"
-#include "Ability/Grab/GrabMover.h"
+#include "Ability/Grab/GrabHandler.h"
+#include "PhysicsEngine/PhysicsConstraintComponent.h"
 
 // Sets default values for this component's properties
 UGrabComponent::UGrabComponent()
 {
-	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
-	// off to improve performance if you don't need them.
-	PrimaryComponentTick.bCanEverTick = false;
+	PrimaryComponentTick.bCanEverTick = true;     // Tick 가능하게 설정
+	PrimaryComponentTick.bStartWithTickEnabled = true; // 시작 시 Tick 활성화
 
-	// ...
+	bAutoActivate = true; // 자동 활성화
 }
 
 
@@ -23,19 +23,32 @@ void UGrabComponent::BeginPlay()
 	Super::BeginPlay();
 }
 
-
 void UGrabComponent::TickComponent(float DeltaTime, enum ELevelTick TickType,
 	FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	if (!bIsTryingToGrab || bIsGrabbing) return;
-
-	DetectClosestGrabbable();
-
-	if (CurrentTarget && GrabMover)
+	switch (CurrentState)
 	{
-		GrabMover->MoveTowardGrabTarget(CurrentTargetLocation);
+	case EGrabState::Idle:
+		break;
+
+	case EGrabState::Detecting:
+		UE_LOG(LogTemp, Warning, TEXT("Grab Component is Detecting closest grabbable."));
+		DetectClosestGrabbable();
+		if (CurrentTarget && GrabHandler)
+		{
+			GrabHandler->MoveToTarget(CurrentTargetLocation); // 이동 상태로 진행
+			// 타겟이 잡히면 Grabbing 상태로 전환
+			//SetGrabState(EGrabState::Grabbing);
+		}
+		break;
+
+	case EGrabState::Grabbing:
+		break;
+
+	default:
+		break;
 	}
 }
 
@@ -49,7 +62,7 @@ void UGrabComponent::DetectClosestGrabbable()
 	FCollisionQueryParams Params;
 	Params.AddIgnoredActor(GetOwner());
 
-	GetWorld()->SweepMultiByChannel(
+	GetWorld()->SweepMultiByChannel( // Start부터 끝까지 Sweep으로 충돌 검사
 		Hits,
 		Start,
 		End,
@@ -65,46 +78,93 @@ void UGrabComponent::DetectClosestGrabbable()
 	for (const FHitResult& Hit : Hits)
 	{
 		AActor* HitActor = Hit.GetActor();
-		if (!HitActor || !IsValidGrabTarget(HitActor)) continue;
+		if (!HitActor || !IsValidGrabTarget(HitActor)) continue; //잡을 수 있는 액터 찾기
 
-		float DistSq = FVector::DistSquared(Hit.ImpactPoint, GetOwner()->GetActorLocation());
-		if (DistSq < ClosestDistanceSq)
+		float DistSq = FVector::DistSquared(Hit.ImpactPoint, GetOwner()->GetActorLocation()); // 액터 위치와의 거리
+		if (DistSq < ClosestDistanceSq) // 가장 가까운 액터 찾기
 		{
 			ClosestDistanceSq = DistSq;
-			ClosestActor = HitActor;
+			ClosestActor = HitActor;			
 			CurrentTargetLocation = Hit.ImpactPoint;
 		}
 	}
 
-	CurrentTarget = ClosestActor;
+	CurrentTarget = ClosestActor; // 가장 가까운 액터를 현재 타겟으로 설정
 
-#if WITH_EDITOR
-	DrawDebugLine(GetWorld(), Start, End, FColor::Yellow, false, 0.1f);
-	DrawDebugSphere(GetWorld(), CurrentTargetLocation, 10.f, 12, FColor::Red, false, 0.1f);
+
+#if WITH_EDITOR // 디버그용. 구로 Sweep 하면 캡슐이니 캡슐로 표시함.
+	FVector SweepCenter = (Start + End) * 0.5f;
+	FVector CapsuleDirection = End - Start;
+	float HalfHeight = CapsuleDirection.Size() * 0.5f;
+	FQuat CapsuleRotation = FRotationMatrix::MakeFromZ(CapsuleDirection).ToQuat();
+
+	DrawDebugCapsule(
+		GetWorld(),
+		SweepCenter,
+		HalfHeight,
+		DetectionRadius,
+		CapsuleRotation,
+		FColor::Green,
+		false,
+		0.1f
+	);
+	DrawDebugSphere(GetWorld(), CurrentTargetLocation, DetectionRadius, 12, FColor::Red, false, 0.1f);
 #endif
 }
 
 void UGrabComponent::StartGrab()
 {
-	bIsTryingToGrab = true;
-	bIsGrabbing = false;
-	CurrentTarget = nullptr;
+	SetGrabState(EGrabState::Detecting);
 }
 
 void UGrabComponent::StopGrab()
 {
-	bIsTryingToGrab = false;
-	bIsGrabbing = false;
+	if (GrabHandler)
+	{
+		GrabHandler->ReleaseGrab();
+	}
 	CurrentTarget = nullptr;
+	SetGrabState(EGrabState::Idle);
+}
 
-	if (GrabMover) GrabMover->ReleaseGrab();
+void UGrabComponent::SetGrabState(EGrabState NewState)
+{
+	if (CurrentState == NewState) return;
+
+	switch (CurrentState)
+	{
+	case EGrabState::Grabbing:
+			break;
+	default:
+		break;
+	}
+
+	CurrentState = NewState;
+
+	// Enter 처리
+	switch (NewState)
+	{
+	case EGrabState::Idle:
+		CurrentTarget = nullptr;
+		break;
+
+	case EGrabState::Grabbing:
+		break;
+
+	default:
+		break;
+	}
+}
+
+EGrabState UGrabComponent::GetCurrentGrabState()
+{
+	return CurrentState;
 }
 
 bool UGrabComponent::IsValidGrabTarget(AActor* Actor) const
 {
 	return Actor->GetClass()->ImplementsInterface(UGrabbable::StaticClass());
 }
-
 
 FVector UGrabComponent::ComputeDetectionStart() const
 {
@@ -118,19 +178,21 @@ FVector UGrabComponent::ComputeDetectionEnd() const
 	return ComputeDetectionStart() + GetOwner()->GetActorForwardVector() * DetectionDistance;
 }
 
-void UGrabComponent::OnColliderOverlap(AActor* OverlappedActor)
+void UGrabComponent::Grabbed(const FGrabTargetInfo& Info)
 {
-	if (!bIsTryingToGrab || bIsGrabbing) return;
-	if (OverlappedActor != CurrentTarget) return;
-
-	if (GrabMover)
-	{
-		GrabMover->ExecuteGrab(OverlappedActor);
-		bIsGrabbing = true;
-	}
+	SetGrabState(EGrabState::Grabbing);
+	GrabbedTargetInfo = Info;
 }
 
-void UGrabComponent::SetGrabMover(TScriptInterface<IGrabMover> InGrabMover)
+void UGrabComponent::Released()
 {
-	GrabMover = InGrabMover;
+	SetGrabState(EGrabState::Idle);
+	GrabbedTargetInfo = {};
+}
+
+void UGrabComponent::SetGrabHandler(TObjectPtr<UGrabHandler> InGrabHandler)
+{
+	GrabHandler = InGrabHandler;
+	GrabHandler->OnGrabStart.AddDynamic(this, &UGrabComponent::Grabbed);
+	GrabHandler->OnGrabRelease.AddDynamic(this, &UGrabComponent::Released);
 }

@@ -6,9 +6,9 @@
 #include "EnhancedInputComponent.h"
 #include "Ability/HeadbuttAbilityStrategy.h"
 #include "Ability/PunchAbilityStrategy.h"
+#include "Ability/Grab/BodyPartGrabHandler.h"
 #include "Ability/Grab/GrabComponent.h"
 #include "Camera/CameraComponent.h"
-#include "Character/BodyPart/AFist.h"
 #include "Character/BodyPart/BodyPart.h"
 #include "Character/BodyPart/AttachInfoComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -39,6 +39,10 @@ ADFCharacter::ADFCharacter()
 	PhysicalAnimData.VelocityStrength = 100.0f;
 	PhysicalAnimData.MaxLinearForce = 100.0f;
 	PhysicalAnimData.MaxAngularForce = 100.0f;
+
+	LeftGrabComp = CreateDefaultSubobject<UGrabComponent>(TEXT("LeftGrab"));
+	
+	RightGrabComp = CreateDefaultSubobject<UGrabComponent>(TEXT("RightGrab"));
 }
 
 // Called when the game starts or when spawned
@@ -48,6 +52,19 @@ void ADFCharacter::BeginPlay()
 	GetMesh()->bPauseAnims = true;
 	MeshOffset = GetMesh()->GetRelativeTransform();
 
+	if (!LeftGrabComp || !RightGrabComp)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Grab Components not properly initialized."));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Grab Components initialized."));
+		//LeftGrabComp->RegisterComponent();  // Owner를 정확히 설정
+		//RightGrabComp->RegisterComponent();
+		UE_LOG(LogTemp, Log, TEXT("Left Grab Component Owner: %s"), *LeftGrabComp->GetOwner()->GetName());
+		UE_LOG(LogTemp, Log, TEXT("Right Grab Component Owner: %s"), *RightGrabComp->GetOwner()->GetName());
+	}
+	
 	ApplyPhysicalAnimationSettings();
 }
 
@@ -106,9 +123,9 @@ void ADFCharacter::Tick(float DeltaTime)
 
 			// Angle 로그 찍기 (실제 Target과의 차이)
 			const float AngleThreshold = 2.0f * (PI / 180.0f);
-			UE_LOG(LogTemp, Log, TEXT("[Recovery] Current Angle: %.2f degrees / Threshold: %.2f degrees"), 
-				FMath::RadiansToDegrees(Angle), 
-				FMath::RadiansToDegrees(AngleThreshold));
+			//UE_LOG(LogTemp, Log, TEXT("[Recovery] Current Angle: %.2f degrees / Threshold: %.2f degrees"), 
+			//	FMath::RadiansToDegrees(Angle), 
+			//	FMath::RadiansToDegrees(AngleThreshold));
 
 			if (Angle < AngleThreshold || RecoverAlpha > 0.95f)
 			{
@@ -168,10 +185,24 @@ void ADFCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 		this,
 		&ADFCharacter::Jump
 	);
+	
+	EnhancedInputComponent->BindAction(
+		GrabAction,
+		ETriggerEvent::Started, // 누르는 순간
+		this,
+		&ADFCharacter::StartGrab
+	);
+
+	EnhancedInputComponent->BindAction(
+	GrabAction,
+	ETriggerEvent::Completed, // 누르는 순간
+	this,
+	&ADFCharacter::StopGrab
+	);
 
 	EnhancedInputComponent->BindAction(
 	PunchAction,
-	ETriggerEvent::Triggered,
+	ETriggerEvent::Completed,
 	this,
 	&ADFCharacter::Punch
 	);
@@ -188,6 +219,13 @@ void ADFCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 	ETriggerEvent::Triggered,
 	this,
 	&ADFCharacter::Headbutt
+	);
+
+	EnhancedInputComponent->BindAction(
+	ReleaseGrabAction,
+	ETriggerEvent::Triggered,
+	this,
+	&ADFCharacter::ReleaseGrab
 	);
 }
 
@@ -225,6 +263,8 @@ void ADFCharacter::Move(const FInputActionValue& Value)
 		SetActorRotation(NewRotation);
 		// CharacterMovementComponent는 Replication 지원해서 AddMovementInput으로
 		AddMovementInput(MovementDirection.GetSafeNormal());
+
+		//GetMovementComponent()->
 		
 		if (!HasAuthority()) Server_Move(NewRotation); //클라면 서버에게 요청
 		else Multicast_Move(NewRotation);  // 서버(리슨서버 주인)이면 바로 멀티캐스트 
@@ -270,32 +310,68 @@ void ADFCharacter::Look(const FInputActionValue& Value)
 }
 
 
-void ADFCharacter::Grab(const FInputActionValue& Value)
+void ADFCharacter::StartGrab(const FInputActionValue& Value)
 {
-	Server_Grab();
+	Server_StartGrab();
 }
 
-void ADFCharacter::Server_Grab_Implementation()
+void ADFCharacter::Server_StartGrab_Implementation()
 {
 	if (bIsStunned) return;
 
 	if (!BodyParts.Contains(EBodyPartType::LeftFist) || !BodyParts.Contains(EBodyPartType::RightFist)) return;
 
-	if (AFist* LeftFist = Cast<AFist>(BodyParts[EBodyPartType::LeftFist]))
+	UE_LOG(LogTemp, Log, TEXT("Started grabbing."));
+
+	if (LeftGrabComp && LeftGrabComp->GetCurrentGrabState() != EGrabState::Grabbing)
 	{
-		if (UGrabComponent* GrabComp = LeftFist->FindComponentByClass<UGrabComponent>())
-		{
-			GrabComp->StartGrab();
-		}
+		UE_LOG(LogTemp, Log, TEXT("Starting left grab."));
+		LeftGrabComp->StartGrab();
 	}
 
-	if (AFist* RightFist = Cast<AFist>(BodyParts[EBodyPartType::RightFist]))
+	if (RightGrabComp && RightGrabComp->GetCurrentGrabState() != EGrabState::Grabbing)
 	{
-		if (UGrabComponent* GrabComp = RightFist->FindComponentByClass<UGrabComponent>())
-		{
-			GrabComp->StartGrab();
-		}
+		UE_LOG(LogTemp, Log, TEXT("Starting right grab."));
+		RightGrabComp->StartGrab();
 	}
+}
+
+void ADFCharacter::StopGrab(const FInputActionValue& Value)
+{
+	Server_StopGrab();
+}
+
+void ADFCharacter::ReleaseGrab(const FInputActionValue& Value)
+{
+	Server_ReleaseGrab();
+}
+
+void ADFCharacter::Server_ReleaseGrab_Implementation()
+{
+	if (bIsStunned) return;
+
+	if (!BodyParts.Contains(EBodyPartType::LeftFist) || !BodyParts.Contains(EBodyPartType::RightFist)) return;
+
+	if (LeftGrabComp && LeftGrabComp->GetCurrentGrabState() == EGrabState::Grabbing)
+	{
+		LeftGrabComp->StopGrab();
+	}
+
+	if (RightGrabComp && RightGrabComp->GetCurrentGrabState() == EGrabState::Grabbing)
+	{
+		RightGrabComp->StopGrab();
+	}
+}
+
+void ADFCharacter::Server_StopGrab_Implementation()
+{
+	if (bIsStunned) return;
+
+	if (!BodyParts.Contains(EBodyPartType::LeftFist) || !BodyParts.Contains(EBodyPartType::RightFist)) return;
+	
+	if (LeftGrabComp && LeftGrabComp->GetCurrentGrabState() != EGrabState::Grabbing) LeftGrabComp->StopGrab();
+
+	if (RightGrabComp  && RightGrabComp->GetCurrentGrabState() != EGrabState::Grabbing) RightGrabComp->StopGrab();
 }
 
 void ADFCharacter::DropKick(const FInputActionValue& Value)
@@ -367,6 +443,31 @@ void ADFCharacter::SpawnBodyParts()
 			SpawnedPart->Attach(this, Info);
 
 			BodyParts.Add(Info->BodyPartType, SpawnedPart);
+		}
+
+		if (LeftGrabComp)
+		{
+			UBodyPartGrabHandler* LeftHandler = NewObject<UBodyPartGrabHandler>();
+			LeftHandler->SetOwningGrabComponent(LeftGrabComp);
+			LeftHandler->Initialize(BodyParts[EBodyPartType::LeftFist]);
+			LeftGrabComp->SetGrabHandler(LeftHandler);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Grab Components not initialized."));
+		}
+
+		// 오른손 핸들러 생성 및 연결
+		if (RightGrabComp)
+		{
+			UBodyPartGrabHandler* RightHandler = NewObject<UBodyPartGrabHandler>();
+			RightHandler->SetOwningGrabComponent(RightGrabComp);
+			RightHandler->Initialize(BodyParts[EBodyPartType::RightFist]);
+			RightGrabComp->SetGrabHandler(RightHandler);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Grab Components not initialized."));
 		}
 	}
 	

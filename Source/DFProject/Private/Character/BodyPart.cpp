@@ -29,7 +29,6 @@ ABodyPart::ABodyPart()
 
 	SetReplicates(true);
 	SetReplicateMovement(true);
-
 }
 
 // Called when the game starts or when spawned
@@ -41,6 +40,16 @@ void ABodyPart::BeginPlay()
 	BodyCollider->SetVisibility(true);
 	
 	
+}
+
+void ABodyPart::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	Super::EndPlay(EndPlayReason);
+
+	if (BoneConstraint) BoneConstraint->BreakConstraint();
+
+	SetOwner(nullptr);
+	OwningCharacter = nullptr;
 }
 
 void ABodyPart::PerformAttack()
@@ -167,4 +176,9 @@ void ABodyPart::OnAttackOverlap(UPrimitiveComponent* OverlappedComp, AActor* Oth
 void ABodyPart::SaveAttackTime()
 {
 	LastAttackTime = GetWorld()->GetTimeSeconds();
+}
+
+TObjectPtr<USphereComponent> ABodyPart::GetBodyCollider()
+{
+	return BodyCollider;
 }

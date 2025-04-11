@@ -1,0 +1,78 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "GrabHandler.generated.h"
+
+class UGrabComponent;
+
+USTRUCT(BlueprintType)
+struct FGrabTargetInfo
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	AActor* TargetActor = nullptr;
+
+	UPROPERTY()
+	UPrimitiveComponent* TargetComponent = nullptr;
+
+	UPROPERTY()
+	FVector HitLocation = FVector::ZeroVector;
+
+	UPROPERTY()
+	FVector HitNormal = FVector::ZeroVector;
+
+	UPROPERTY()
+	FName SocketName = NAME_None;
+};
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnGrabStart, const FGrabTargetInfo&, TargetInfo);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnGrabRelease);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnGrabFailed, const FGrabTargetInfo&, TargetInfo);
+
+/**
+ * GrabComponent가 필터링과 감지, 흐름을 관리한다면
+ * 여긴 감지한 대상을 어떻게 잡을 지, 잡고 난 후의 처리를 담당
+ */
+UCLASS(Blueprintable)
+class UGrabHandler : public UObject
+{
+	GENERATED_BODY()
+public:
+	void SetOwningGrabComponent(UGrabComponent* GrabComp);
+	bool IsGrabbable(const AActor* Target);
+	
+	UFUNCTION(BlueprintCallable, Category = "Grab")
+	virtual void MoveToTarget(const FVector& Location) {}
+	
+	UFUNCTION(BlueprintCallable, Category = "Grab")
+	virtual void ExecuteGrab(const FGrabTargetInfo& TargetInfo) {OnGrabStart.Broadcast(TargetInfo);}
+	
+	UFUNCTION(BlueprintCallable, Category = "Grab")
+	virtual void ReleaseGrab() {OnGrabRelease.Broadcast(); }
+
+	UPROPERTY(BlueprintAssignable, Category = "GrabEvents")
+	FOnGrabStart OnGrabStart;
+
+	UPROPERTY(BlueprintAssignable, Category = "GrabEvents")
+	FOnGrabRelease OnGrabRelease;
+
+	UPROPERTY(BlueprintAssignable, Category = "GrabEvents")
+	FOnGrabFailed OnGrabFailed;
+
+protected:
+	UFUNCTION()
+	void OnGrabColliderBeginOverlap(
+		UPrimitiveComponent* OverlappedComponent,
+		AActor* OtherActor,
+		UPrimitiveComponent* OtherComp,
+		int32 OtherBodyIndex,
+		bool bFromSweep,
+		const FHitResult& SweepResult
+		);
+	
+	UPROPERTY()
+	UGrabComponent* OwningGrabComponent;
+};

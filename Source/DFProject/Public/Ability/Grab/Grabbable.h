@@ -3,7 +3,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "UObject/NoExportTypes.h"
 #include "Grabbable.generated.h"
 
 UENUM(BlueprintType)
@@ -27,7 +26,7 @@ class DFPROJECT_API IGrabbable
 public:
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Grab")
-	FName GetPreferredGrabSocketName() const;
+	TArray<FName> GetPreferredGrabSocketNames() const;
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Grab")
 	EGrabMode GetGrabMode() const;

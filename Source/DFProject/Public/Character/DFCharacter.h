@@ -7,6 +7,7 @@
 #include "PhysicsEngine/PhysicalAnimationComponent.h"
 #include "DFCharacter.generated.h"
 
+class UGrabComponent;
 class UPhysicalAnimationComponent;
 class AFist;
 class UCameraComponent;
@@ -31,8 +32,7 @@ protected:
 public:	
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-
-
+	
 	////// 캐릭터 액션
 	void Move(const FInputActionValue& Value);
 	
@@ -51,10 +51,20 @@ public:
 	
 	void Look(const FInputActionValue& Value); // 다른 클라는 몰라도 되니까 로컬만
 
-	void Grab(const FInputActionValue& Value);
+	void StartGrab(const FInputActionValue& Value);
 
 	UFUNCTION(Server, Reliable, BlueprintCallable)
-	void Server_Grab();
+	void Server_StartGrab();
+
+	void StopGrab(const FInputActionValue& Value);
+	
+	UFUNCTION(Server, Reliable, BlueprintCallable)
+	void Server_StopGrab();
+
+	void ReleaseGrab(const FInputActionValue& Value);
+
+	UFUNCTION(Server, Reliable, BlueprintCallable)
+	void Server_ReleaseGrab();
 	
 	void DropKick(const FInputActionValue& Value);
 
@@ -116,6 +126,9 @@ public:
 	TObjectPtr<UInputAction> GrabAction;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Input)
+	TObjectPtr<UInputAction> ReleaseGrabAction;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Input)
 	TObjectPtr<UInputAction> DropKickAction;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Input)
@@ -127,15 +140,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Input)
 	TObjectPtr<UInputAction> JumpAction;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category=Input)
-	TSubclassOf<AFist> FistClass;
-	
-	UPROPERTY(EditDefaultsOnly, Category="Fist")
-	FName LeftHandBoneName = TEXT("LeftHand");
-
-	UPROPERTY(EditDefaultsOnly, Category="Fist")
-	FName RightHandBoneName = TEXT("RightHand");
-	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=PhysicalAnimation)
 	TObjectPtr<UPhysicalAnimationComponent> PhysicalAnimComp;
 	
@@ -166,4 +170,13 @@ public:
 	FTimerHandle RecoverTimer;
 	int32 RecoverInputCount = 0;
 	int32 RecoverInputGoal = 0;
+
+	UPROPERTY(EditDefaultsOnly)
+	TObjectPtr<UGrabComponent> RightGrabComp;
+	
+	UPROPERTY(EditDefaultsOnly)
+	TObjectPtr<UGrabComponent> LeftGrabComp;
 };
+
+
+

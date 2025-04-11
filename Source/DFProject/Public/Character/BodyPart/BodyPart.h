@@ -37,7 +37,7 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 public:
 	UFUNCTION(BlueprintCallable, NetMulticast, Reliable, Category="BodyPart")
 	virtual void Attach(ACharacter* TargetCharacter, const UAttachInfoComponent* AttachInfo);
@@ -53,7 +53,8 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category="Attack")
 	void SaveAttackTime();
-	
+
+	TObjectPtr<USphereComponent> GetBodyCollider();
 protected:	
 	FTransform GetOffsetTransform(const ACharacter* TargetCharacter, const UAttachInfoComponent* AttachInfo);
 

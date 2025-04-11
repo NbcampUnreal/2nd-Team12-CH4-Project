@@ -3,13 +3,30 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GrabHandler.h"
 #include "Components/ActorComponent.h"
 #include "GrabComponent.generated.h"
 
-class IGrabMover;
+class UGrabHandler;
+class UPhysicsConstraintComponent;
+class IGrabHandler;
 class ABodyPart;
 
+UENUM(BlueprintType)
+enum class EGrabState : uint8
+{
+	Idle,
+	Detecting,
+	MovingToGrab,
+	Grabbing,
+};
 
+
+/**
+ * 필터링과 감지, 흐름을 관리
+ * 
+ * Handler를 선택해 감지한 대상을 어떻게 잡을 지 처리 가능
+ */
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class DFPROJECT_API UGrabComponent : public UActorComponent
 {
@@ -20,23 +37,31 @@ public:
 
 	virtual void BeginPlay() override;
 
+	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+
 	void StartGrab();
 
 	void StopGrab();
 
-	void OnColliderOverlap(AActor* OverlappedActor);
+	void SetGrabHandler(TObjectPtr<UGrabHandler> InGrabHandler);
 
-	void SetGrabMover(TScriptInterface<IGrabMover> InGrabMover);
+	void SetGrabState(EGrabState NewState);
 
+	EGrabState GetCurrentGrabState();
+	
 protected:
-	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
-
 	void DetectClosestGrabbable();
 	
 	bool IsValidGrabTarget(AActor* Actor) const;
 
 	FVector ComputeDetectionStart() const;
 	FVector ComputeDetectionEnd() const;
+
+	UFUNCTION(BlueprintCallable, Category = "GrabEvents")
+	void Grabbed(const FGrabTargetInfo& Info);
+
+	UFUNCTION(BlueprintCallable, Category = "GrabEvents")
+	void Released();
 	
 	UPROPERTY()
 	AActor* CurrentTarget;
@@ -45,19 +70,21 @@ protected:
 	FVector CurrentTargetLocation;
 	
 	UPROPERTY()
-	TScriptInterface<IGrabMover> GrabMover;
-
-	bool bIsTryingToGrab = false;
-	bool bIsGrabbing = false;
+	TObjectPtr<UGrabHandler> GrabHandler;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
-	float DetectionRadius;
+	float DetectionRadius = 100;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float DetectionDistance;
+	float DetectionDistance = 100;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float DetectionAngle;
+
+	EGrabState CurrentState = EGrabState::Idle;
+
+	FGrabTargetInfo GrabbedTargetInfo;
 };
+
 
 
