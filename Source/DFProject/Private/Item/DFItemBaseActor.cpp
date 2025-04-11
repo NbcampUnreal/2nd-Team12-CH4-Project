@@ -39,12 +39,11 @@ void ADFItemBaseActor::SetupItem(UDFItemInstance* NewInstance)
 	{		
 	ItemInstance = NewInstance;
 	ItemMesh->SetSkeletalMesh(NewInstance->ItemData->ItemMesh);
+	ItemMesh->SetSimulatePhysics(true);
+	ItemMesh->SetAnimationMode(EAnimationMode::AnimationBlueprint);
+	ItemMesh->SetAnimInstanceClass(NewInstance->ItemData->AnimBP);
 
 	GripArea->AttachToComponent(ItemMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("HandGripSocket"));
-
-	ItemMesh->SetSimulatePhysics(true);
-	ItemMesh->SetAllBodiesBelowSimulatePhysics("Root", false, false);
-	ItemMesh->SetAllBodiesBelowPhysicsBlendWeight("Root", 0.0f, true);
 
 	AttachAbilities();
 	}
@@ -89,8 +88,27 @@ void ADFItemBaseActor::AttachAbilities()
 				NewAbility->RegisterComponent();
 				AddInstanceComponent(NewAbility);
 				NewAbility->Activate(true);
+				ItemAbilities.Add(NewAbility);
 			}
 		}
+	}
+}
+
+void ADFItemBaseActor::AbilitiesMainAction()
+{
+	if (ItemAbilities.Num() == 0)
+	{
+		return;
+	}
+
+	for (UDFItemAbilityComponent* Ability : ItemAbilities)
+	{
+		if (!IsValid(Ability))
+		{
+			continue;
+		}
+
+		Ability->MainAction();
 	}
 }
 

@@ -1,11 +1,20 @@
 #include "Item/DFPunchgunAttackComponent.h"
+#include "Item/DFBattleItem.h"
+#include "Item/DFItemBaseActor.h"
+#include "Item/DFItemInstance.h"
 
 UDFPunchgunAttackComponent::UDFPunchgunAttackComponent()
 {
 
 }
 
+void UDFPunchgunAttackComponent::BeginPlay()
+{
+	Super::BeginPlay();
+}
+
 void UDFPunchgunAttackComponent::MainAction()
 {
-	GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Green, FString::Printf(TEXT("띠용")));
+	Super::MainAction();
+
 }

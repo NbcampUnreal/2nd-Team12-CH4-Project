@@ -13,5 +13,8 @@ public:
 	UDFPunchgunAttackComponent();
 	UFUNCTION(BlueprintCallable, Category = "Ability")
 	void MainAction() override;
+
+protected:
+	virtual void BeginPlay() override;
 	
 };

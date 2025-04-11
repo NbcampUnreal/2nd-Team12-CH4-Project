@@ -3,4 +3,6 @@
 UDFBattleItem::UDFBattleItem()
 {
 	AssetType = FPrimaryAssetType("BattleItem");
+	ActionSound = nullptr;
+	ActionAnim = nullptr;
 }

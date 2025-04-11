@@ -19,7 +19,53 @@ ADFItemSpawner::ADFItemSpawner()
 
 	bIsValidArea = false;
 	SpawnCount = 0;
+}
 
+void ADFItemSpawner::SpawnItem()
+{
+	FPrimaryAssetType ItemType = FPrimaryAssetType("BattleItem");
+
+	TArray<FPrimaryAssetId> AssetIds;
+	UAssetManager::Get().GetPrimaryAssetIdList(ItemType, AssetIds);
+
+	if (AssetIds.Num() == 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("스포너 : 애셋 없음"))
+			return;
+	}
+	int32 RandIndex = FMath::RandRange(0, AssetIds.Num() - 1);
+	FPrimaryAssetId ChosenId = AssetIds[RandIndex];
+
+	UAssetManager::Get().LoadPrimaryAsset(ChosenId, {}, FStreamableDelegate::CreateLambda([=, this]() {
+		UObject* Loaded = UAssetManager::Get().GetPrimaryAssetObject(ChosenId);
+		UDFBattleItem* LoadedItem = Cast<UDFBattleItem>(Loaded);
+	
+		if (!LoadedItem || !LoadedItem->ItemActorClass)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("스포너 : 데이터 또는 액터클래스 없음"));
+			return;			
+		}
+
+		UDFItemInstance* NewInstance = NewObject<UDFItemInstance>();
+		NewInstance->Initialize(LoadedItem);
+
+		bIsValidArea = false;
+		FTransform SpawnTransform = SetSpawnTransform();
+		if (!bIsValidArea)
+		{
+			return;
+		}
+
+		ADFItemBaseActor* SpawnedActor = GetWorld()->SpawnActor<ADFItemBaseActor>(LoadedItem->ItemActorClass, SpawnTransform);
+
+		if (!SpawnedActor)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("액터 스폰 실패"));
+			return;
+		}
+
+		SpawnedActor->SetupItem(NewInstance);
+	}));
 }
 
 FTransform ADFItemSpawner::SetSpawnTransform()
@@ -115,7 +161,7 @@ FTransform ADFItemSpawner::SetSpawnTransform()
 
 			if (TryCount >= 50)
 			{
-				UE_LOG(LogTemp, Warning, (TEXT("스폰 가능 구역 없음")));
+				UE_LOG(LogTemp, Warning, (TEXT("스폰 가능 구역 없음"))); 
 			}
 		}
 	}
@@ -125,53 +171,21 @@ FTransform ADFItemSpawner::SetSpawnTransform()
 	return FTransform(RandRotation, SpawnLocation);
 }
 
-void ADFItemSpawner::SpawnItem()
+void ADFItemSpawner::SpawnItemNumberLimit(int32 LimitNumber)
 {
-	FPrimaryAssetType ItemType = FPrimaryAssetType("BattleItem");
-
-	TArray<FPrimaryAssetId> AssetIds;
-	UAssetManager::Get().GetPrimaryAssetIdList(ItemType, AssetIds);
-
-	if (AssetIds.Num() == 0)
+	if (LimitNumber >= 1)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("스포너 : 애셋 없음"))
-			return;
+		while (SpawnCount < LimitNumber)
+		{
+			SpawnItem();
+			SpawnCount++;
+		}
 	}
-	int32 RandIndex = FMath::RandRange(0, AssetIds.Num() - 1);
-	FPrimaryAssetId ChosenId = AssetIds[RandIndex];
 
-	UAssetManager::Get().LoadPrimaryAsset(ChosenId, {}, FStreamableDelegate::CreateLambda([=, this]() {
-		UObject* Loaded = UAssetManager::Get().GetPrimaryAssetObject(ChosenId);
-		UDFBattleItem* LoadedItem = Cast<UDFBattleItem>(Loaded);
-	
-		if (!LoadedItem || !LoadedItem->ItemActorClass)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("스포너 : 데이터 또는 액터클래스 없음"));
-			return;			
-		}
-
-		UDFItemInstance* NewInstance = NewObject<UDFItemInstance>();
-		NewInstance->Initialize(LoadedItem);
-
-		bIsValidArea = false;
-		FTransform SpawnTransform = SetSpawnTransform();
-		if (!bIsValidArea)
-		{
-			return;
-		}
-
-		ADFItemBaseActor* SpawnedActor = GetWorld()->SpawnActor<ADFItemBaseActor>(LoadedItem->ItemActorClass, SpawnTransform);
-
-		if (!SpawnedActor)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("액터 스폰 실패"));
-			return;
-		}
-
-		SpawnedActor->SetupItem(NewInstance);
-		SpawnCount++;
-
-	}));
+	else
+	{
+		return;
+	}
 }
 
 int32 ADFItemSpawner::GetSpawnCount() const

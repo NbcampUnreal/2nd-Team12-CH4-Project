@@ -38,6 +38,9 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Item")
 	FPrimaryAssetType AssetType;
 
+	UPROPERTY(EditAnywhere, Category = "Item")
+	TSubclassOf<UAnimInstance> AnimBP;
+
 	UFUNCTION(BlueprintCallable, Category = "Item")
 	FText GetDisplayItemName() const;
 

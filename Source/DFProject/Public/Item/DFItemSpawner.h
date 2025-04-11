@@ -28,9 +28,10 @@ public:
 	FTransform SetSpawnTransform();
 	UFUNCTION(BlueprintCallable, Category = "ItemSpawner")
 	int32 GetSpawnCount() const;
+	UFUNCTION(BlueprintCallable, Category = "ItemSpawner")
+	void SpawnItemNumberLimit(int32 LimitNumber);
 
 protected:
-	//virtual void BeginPlay() override;
 	bool bIsValidArea;
 	int32 SpawnCount;
 };
