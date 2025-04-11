@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 #include "CoreMinimal.h"
 #include "Engine/TriggerVolume.h"
@@ -15,7 +15,7 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
-	// ¿À¹ö·¦ ½ÃÀÛ ÀÌº¥Æ® (Actor°¡ µ¥µåÁ¸¿¡ µé¾î¿Ã ¶§ È£Ãâ)
+	// ì˜¤ë²„ë© ì‹œì‘ ì´ë²¤íŠ¸ (Actorê°€ ë°ë“œì¡´ì— ë“¤ì–´ì˜¬ ë•Œ í˜¸ì¶œ)
 	UFUNCTION()
 	void OnOverlapBegin(AActor* OverlappedActor, AActor* OtherActor);
 };

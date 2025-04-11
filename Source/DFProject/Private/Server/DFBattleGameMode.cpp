@@ -124,7 +124,17 @@ void ADFBattleGameMode::HandlePlayerOutOfBounds(APawn* Pawn)
     AController* Controller = Pawn->GetController();
     if (Controller && IsValid(Controller))
     {
-        Controller->UnPossess();
+        // 만약 APlayerController라면 관전 전환
+        if (APlayerController* PC = Cast<APlayerController>(Controller))
+        {
+            PC->UnPossess();
+            PC->StartSpectatingOnly();
+        }
+        // AI 컨트롤러라면, 관전 모드 지원이 없다면 다른 방식으로 처리
+        else
+        {
+			Controller->UnPossess();
+        }
     }
 
     // 추가 정리(예: PlayerState 업데이트)가 필요한 경우 여기에 구현 가능
