@@ -3,6 +3,8 @@
 #include "TimerManager.h"
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
+#include "Camera/CameraActor.h"
+#include "GameFramework/Actor.h"
 #include "Character/DFPlayerState.h"
 #include "Kismet/GameplayStatics.h"
 
@@ -20,6 +22,27 @@ ADFBattleGameMode::ADFBattleGameMode()
 void ADFBattleGameMode::BeginPlay()
 {
     Super::BeginPlay();
+
+    // 레벨에 배치된 모든 카메라 액터를 가져온다.
+    TArray<AActor*> FoundCameras;
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), ACameraActor::StaticClass(), FoundCameras);
+
+    // "Spectator" 이름의 카메라 액터를 찾는다.
+    for (AActor* Actor : FoundCameras)
+    {
+        if (Actor->Tags.Contains(TEXT("Spectator")))
+        {
+            SpectatorCamera = Cast<ACameraActor>(Actor);
+            UE_LOG(LogTemp, Log, TEXT("Spectator camera found by tag: %s"), *Actor->GetName());
+            break;
+        }
+    }
+
+    // 찾지 못한 경우 경고 로그 출력
+    if (!SpectatorCamera)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Spectator 이름의 카메라 액터를 찾지 못했습니다."));
+    }
 
     // 게임 시작 시 현재 시간을 기록
     GameStartTime = GetWorld()->GetTimeSeconds();
@@ -124,11 +147,20 @@ void ADFBattleGameMode::HandlePlayerOutOfBounds(APawn* Pawn)
     AController* Controller = Pawn->GetController();
     if (Controller && IsValid(Controller))
     {
-        // 만약 APlayerController라면 관전 전환
         if (APlayerController* PC = Cast<APlayerController>(Controller))
         {
             PC->UnPossess();
             PC->StartSpectatingOnly();
+
+            // 즉시 전환되지 않을 경우, 타이머를 사용하여 딜레이 후에 카메라 전환
+            FTimerHandle TempHandle;
+            GetWorldTimerManager().SetTimer(TempHandle, FTimerDelegate::CreateLambda([PC, this]()
+                {
+                    if (SpectatorCamera)
+                    {
+                        PC->SetViewTargetWithBlend(SpectatorCamera, 0.5f); // 0.5초 블렌드 효과 적용
+                    }
+                }), 0.1f, false); // 0.1초 후에 실행
         }
         // AI 컨트롤러라면, 관전 모드 지원이 없다면 다른 방식으로 처리
         else
