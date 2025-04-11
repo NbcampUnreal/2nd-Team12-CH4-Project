@@ -119,10 +119,8 @@ void UGrabComponent::StartGrab()
 
 void UGrabComponent::StopGrab()
 {
-	if (GrabHandler)
-	{
-		GrabHandler->ReleaseGrab();
-	}
+	if (CurrentState == EGrabState::Grabbing) return;
+	
 	CurrentTarget = nullptr;
 	SetGrabState(EGrabState::Idle);
 }
@@ -197,6 +195,4 @@ void UGrabComponent::Released()
 void UGrabComponent::SetGrabHandler(TObjectPtr<UGrabHandler> InGrabHandler)
 {
 	GrabHandler = InGrabHandler;
-	GrabHandler->OnGrabStart.AddDynamic(this, &UGrabComponent::Grabbed);
-	GrabHandler->OnGrabRelease.AddDynamic(this, &UGrabComponent::Released);
 }

@@ -48,10 +48,11 @@ public:
 	virtual void MoveToTarget(const FVector& Location) {}
 	
 	UFUNCTION(BlueprintCallable, Category = "Grab")
-	virtual void ExecuteGrab(const FGrabTargetInfo& TargetInfo) {OnGrabStart.Broadcast(TargetInfo);}
+	virtual void ExecuteGrab(const FGrabTargetInfo& TargetInfo);
 	
 	UFUNCTION(BlueprintCallable, Category = "Grab")
-	virtual void ReleaseGrab() {OnGrabRelease.Broadcast(); }
+	virtual void ReleaseGrab();
+
 
 	UPROPERTY(BlueprintAssignable, Category = "GrabEvents")
 	FOnGrabStart OnGrabStart;

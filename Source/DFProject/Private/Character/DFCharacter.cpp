@@ -354,12 +354,12 @@ void ADFCharacter::Server_ReleaseGrab_Implementation()
 
 	if (LeftGrabComp && LeftGrabComp->GetCurrentGrabState() == EGrabState::Grabbing)
 	{
-		LeftGrabComp->StopGrab();
+		LeftGrabComp->Released();
 	}
 
 	if (RightGrabComp && RightGrabComp->GetCurrentGrabState() == EGrabState::Grabbing)
 	{
-		RightGrabComp->StopGrab();
+		RightGrabComp->Released();
 	}
 }
 

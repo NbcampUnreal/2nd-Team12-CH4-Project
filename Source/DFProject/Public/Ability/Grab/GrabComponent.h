@@ -39,9 +39,15 @@ public:
 
 	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
-	void StartGrab();
+	void StartGrab(); // 소유자가 잡기를 시작할 때 호출
 
-	void StopGrab();
+	void StopGrab(); // 잡기 감지 취소
+
+	UFUNCTION(BlueprintCallable, Category = "GrabEvents") // 대상이 잡힐 때 호출됨.
+	void Grabbed(const FGrabTargetInfo& Info);
+
+	UFUNCTION(BlueprintCallable, Category = "GrabEvents") // 대상을 놓을 때 호출해야함.
+	void Released();
 
 	void SetGrabHandler(TObjectPtr<UGrabHandler> InGrabHandler);
 
@@ -57,11 +63,6 @@ protected:
 	FVector ComputeDetectionStart() const;
 	FVector ComputeDetectionEnd() const;
 
-	UFUNCTION(BlueprintCallable, Category = "GrabEvents")
-	void Grabbed(const FGrabTargetInfo& Info);
-
-	UFUNCTION(BlueprintCallable, Category = "GrabEvents")
-	void Released();
 	
 	UPROPERTY()
 	AActor* CurrentTarget;

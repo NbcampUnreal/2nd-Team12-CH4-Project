@@ -30,9 +30,9 @@ void UBodyPartGrabHandler::BeginDestroy()
 		GrabConstraint->BreakConstraint();
 	}
 
-	GrabConstraint = nullptr;
-	Root = nullptr;
-	CurrentGrabTarget = nullptr;
+	//GrabConstraint = nullptr;
+	//Root = nullptr;
+	//CurrentGrabTarget = nullptr;
 }
 
 void UBodyPartGrabHandler::Initialize(ABodyPart* BodyPart)
@@ -76,12 +76,15 @@ void UBodyPartGrabHandler::ExecuteGrab(const FGrabTargetInfo& TargetInfo)
 	);
 	
 	CurrentGrabTarget = TargetInfo.TargetActor;
+
 }
 
 void UBodyPartGrabHandler::ReleaseGrab()
 {
+	UE_LOG(LogTemp, Warning, TEXT("[GrabHandler] ReleaseGrab called"));
 	Super::ReleaseGrab();
 	if (!GrabConstraint) return;
+	UE_LOG(LogTemp, Warning, TEXT("[GrabHandler] Breaking constraint now"));
 	GrabConstraint->BreakConstraint();
 	CurrentGrabTarget = nullptr;
 }
