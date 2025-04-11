@@ -6,9 +6,6 @@
 #include "GameFramework/PlayerController.h"
 #include "DFMenuController.generated.h"
 
-/**
- * 
- */
 UCLASS()
 class DFPROJECT_API ADFMenuController : public APlayerController
 {

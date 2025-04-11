@@ -39,24 +39,18 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_GameState, Category = "Game State")
     EDFBattleGameStateStatus CurrentGameState;
 
-    // 남은 시간 (예: 라운드 타이머)
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated, Category = "Game State")
-    float CurrentTimeRemaining;
-
-    // 총 점수 (필요에 따라 팀별 혹은 플레이어별로 확장 가능)
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated, Category = "Game State")
-    int32 TotalScore;
+    // 최종 생존자 또는 승자의 이름
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated, Category = "Game Results")
+    FString FinalWinnerName;
 
     // 게임 상태 변경 이벤트 (블루프린트에서 바인딩 가능)
     UPROPERTY(BlueprintAssignable, Category = "Events")
     FOnGameStateChangedSignature OnGameStateChanged;
+    // 네트워크 복제 설정 함수
+    virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 protected:
     // 복제로 인해 클라이언트에서 게임 상태가 업데이트될 때 호출되는 함수
     UFUNCTION()
     virtual void OnRep_GameState();
-
-public:
-    // 네트워크 복제 설정 함수
-    virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 };

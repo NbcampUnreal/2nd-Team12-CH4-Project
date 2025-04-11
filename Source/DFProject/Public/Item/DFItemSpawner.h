@@ -16,18 +16,21 @@ class DFPROJECT_API ADFItemSpawner : public AActor
 public:	
 	ADFItemSpawner();
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "ItemSpawner")
 	USceneComponent* Scene;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ItemSpawner")
 	UBoxComponent* SpawnArea;
 
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "ItemSpawner")
 	void SpawnItem();
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "ItemSpawner")
 	FTransform SetSpawnTransform();
+	UFUNCTION(BlueprintCallable, Category = "ItemSpawner")
+	int32 GetSpawnCount() const;
 
 protected:
 	virtual void BeginPlay() override;
-
+	bool bIsValidArea;
+	int32 SpawnCount;
 };

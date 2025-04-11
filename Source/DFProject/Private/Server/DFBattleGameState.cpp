@@ -5,8 +5,6 @@ ADFBattleGameState::ADFBattleGameState()
 {
     // 올바른 enum 값으로 초기화
     CurrentGameState = EDFBattleGameStateStatus::Waiting;
-    CurrentTimeRemaining = 0.f;
-    TotalScore = 0;
 
     // GameState는 기본적으로 복제를 활성화합니다.
     bReplicates = true;
@@ -23,6 +21,5 @@ void ADFBattleGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
     DOREPLIFETIME(ADFBattleGameState, CurrentGameState);
-    DOREPLIFETIME(ADFBattleGameState, CurrentTimeRemaining);
-    DOREPLIFETIME(ADFBattleGameState, TotalScore);
+	DOREPLIFETIME(ADFBattleGameState, FinalWinnerName);
 }

@@ -15,3 +15,8 @@ FPrimaryAssetId UDFBaseItem::GetPrimaryAssetId() const
 {
 	return FPrimaryAssetId(AssetType, GetFName());
 }
+
+FName UDFBaseItem::GetItemId() const
+{
+	return ItemID;
+}
