@@ -3,6 +3,7 @@
 #include "Item/DFBattleItem.h"
 #include "Item/DFItemAbilityComponent.h"
 #include "Components/SphereComponent.h"
+#include "PhysicsEngine/PhysicalAnimationComponent.h"
 
 ADFItemBaseActor::ADFItemBaseActor()
 {
@@ -12,6 +13,8 @@ ADFItemBaseActor::ADFItemBaseActor()
 	SetRootComponent(ItemMesh);
 	ItemMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	ItemMesh->SetCollisionObjectType(ECC_PhysicsBody);	
+
+	PhysicalAnimComp = CreateDefaultSubobject<UPhysicalAnimationComponent>(TEXT("PhysicsAnimComp"));
 
 	GripArea = CreateDefaultSubobject<USphereComponent>(TEXT("GripArea"));
 	GripArea->InitSphereRadius(50.0f);
@@ -43,11 +46,12 @@ void ADFItemBaseActor::SetupItem(UDFItemInstance* NewInstance)
 	ItemMesh->SetAnimationMode(EAnimationMode::AnimationBlueprint);
 	ItemMesh->SetAnimInstanceClass(NewInstance->ItemData->AnimBP);
 
+	PhysicalAnimComp->SetSkeletalMeshComponent(ItemMesh);
+
 	GripArea->AttachToComponent(ItemMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("HandGripSocket"));
 
 	AttachAbilities();
-	}
-	
+	}	
 }
 
 void ADFItemBaseActor::OnGripAreaBeginOverlap(

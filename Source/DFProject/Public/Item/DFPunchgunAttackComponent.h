@@ -4,7 +4,7 @@
 #include "Item/DFItemAbilityComponent.h"
 #include "DFPunchgunAttackComponent.generated.h"
 
-UCLASS()
+UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class DFPROJECT_API UDFPunchgunAttackComponent : public UDFItemAbilityComponent
 {
 	GENERATED_BODY()
@@ -16,5 +16,7 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+
+	FTimerHandle SimulTimerHandle;
 	
 };

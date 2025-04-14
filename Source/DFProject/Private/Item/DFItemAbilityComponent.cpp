@@ -2,6 +2,7 @@
 #include "Item/DFBattleItem.h"
 #include "Item/DFItemBaseActor.h"
 #include "Item/DFItemInstance.h"
+#include "Kismet/GameplayStatics.h"
 
 UDFItemAbilityComponent::UDFItemAbilityComponent()
 {
@@ -30,6 +31,11 @@ void UDFItemAbilityComponent::BeginPlay()
 				{
 					ParentActionAnim = ParentItemData->ActionAnim;
 				}
+
+				if (ParentItemData->ActionSound)
+				{
+					ParentActionsound = ParentItemData->ActionSound;
+				}
 			}
 
 			if (ParentActor->ItemMesh)
@@ -47,17 +53,24 @@ void UDFItemAbilityComponent::MainAction()
 	{
 		if (UAnimInstance* AnimInstance = ParentMesh->GetAnimInstance())
 		{
-			float Played = AnimInstance->Montage_Play(ParentActionAnim);
-			UE_LOG(LogTemp, Warning, TEXT("🎬 Montage_Play 반환값: %f"), Played);
 
-			if (AnimInstance->Montage_IsPlaying(ParentActionAnim))
-			{
-				UE_LOG(LogTemp, Warning, TEXT("✅ 몽타주 재생 확인됨"));
-			}
-			else
-			{
-				UE_LOG(LogTemp, Warning, TEXT("❌ 몽타주 재생 안됨"));
-			}
+			float Played = AnimInstance->Montage_Play(ParentActionAnim);
+
 		}
+	}
+
+	PlayActionSound();
+}
+
+void UDFItemAbilityComponent::PlayActionSound()
+{
+	if (!ParentActionsound)
+	{
+		return;
+	}
+
+	if (ParentActionsound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, ParentActionsound, ParentActor->GetActorLocation());
 	}
 }

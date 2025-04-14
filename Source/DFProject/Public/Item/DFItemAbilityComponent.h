@@ -19,8 +19,11 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void PlayActionSound();
+
 	ADFItemBaseActor* ParentActor;
 	UDFBattleItem* ParentItemData;
 	USkeletalMeshComponent* ParentMesh;
 	UAnimMontage* ParentActionAnim;
+	USoundBase* ParentActionsound;
 };

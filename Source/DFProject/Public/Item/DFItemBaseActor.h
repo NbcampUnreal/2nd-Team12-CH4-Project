@@ -9,6 +9,7 @@
 class UDFItemInstance;
 class USphereComponent;
 class UDFItemAbilityComponent;
+class UPhysicalAnimationComponent;
 
 UCLASS()
 class DFPROJECT_API ADFItemBaseActor : public AActor
@@ -29,6 +30,10 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item")
 	TArray<UDFItemAbilityComponent*> ItemAbilities;
+
+	UPROPERTY(VisibleAnywhere, Category = "Physics")
+	UPhysicalAnimationComponent* PhysicalAnimComp;
+
 
 	UFUNCTION()
 	void OnGripAreaBeginOverlap(
