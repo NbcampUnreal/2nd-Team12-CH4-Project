@@ -25,12 +25,25 @@ class DFPROJECT_API IGrabbable
 
 public:
 
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Grab")
-	TArray<FName> GetPreferredGrabSocketNames() const;
+	//UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Grabbable")
+	//TArray<FName> GetPreferredGrabSocketNames() const;
 
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Grab")
-	EGrabMode GetGrabMode() const;
+	//UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Grabbable")
+	//EGrabMode GetGrabMode() const;
 
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Grab")
-	void OnGrabbedBy(AActor* Grabber);
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Grabbable")
+	AActor* GetActualTarget();
+
+	
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Grabbable")
+	void OnGrabbed(AActor* Grabber);
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Grabbable")
+	void OnGrabReleased(AActor* Grabber);
+	
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category="Grabbable")
+	FVector GetResistanceForce(AActor* PullingActor);
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category="Grabbable")
+	UPrimitiveComponent* GetRoot();
 };

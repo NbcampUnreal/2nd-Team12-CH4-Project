@@ -3,10 +3,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Ability/Grab/Grabbable.h"
 #include "GameFramework/Character.h"
 #include "PhysicsEngine/PhysicalAnimationComponent.h"
 #include "DFCharacter.generated.h"
 
+class UCharacterStateManager;
+class UMovementModifierComponent;
 class UGrabComponent;
 class UPhysicalAnimationComponent;
 class AFist;
@@ -19,7 +22,7 @@ struct FInputActionValue;
 enum class EBodyPartType : uint8;
 
 UCLASS()
-class DFPROJECT_API ADFCharacter : public ACharacter
+class DFPROJECT_API ADFCharacter : public ACharacter, public IGrabbable
 {
 	GENERATED_BODY()
 
@@ -100,9 +103,17 @@ public:
 	void FinishGetUp();
 
 	void RecoverHandleInput();
+
+	void SetAllBonesMass(float InMass);
 	///////
 	
 	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
+
+	virtual AActor* GetActualTarget_Implementation() override;
+	virtual FVector GetResistanceForce_Implementation(AActor* PullingActor) override;
+	virtual void OnGrabbed_Implementation(AActor* Grabber) override;
+	virtual void OnGrabReleased_Implementation(AActor* Grabber) override;
+	virtual UPrimitiveComponent* GetRoot_Implementation() override;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category=Camera)
 	TObjectPtr<USpringArmComponent> SpringArm;
@@ -155,14 +166,7 @@ public:
 	UPROPERTY()
 	FTransform MeshOffset;
 
-	UPROPERTY()
-	FQuat InitialRecoveryRotation;
-
 	bool bLeft = true;
-	bool bIsStunned = false;
-	bool bIsRecovering = false;
-	float RecoverAlpha = 0.0f;
-	float RecoverSpeed = 0.8f;
 
 	float MaxHP = 100.0f;
 	float HP = 100.0f;
@@ -176,7 +180,11 @@ public:
 	
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<UGrabComponent> LeftGrabComp;
+	
+	UPROPERTY(EditAnywhere)
+	TObjectPtr<UMovementModifierComponent> MovementModifier;
+
+	UPROPERTY(BlueprintReadOnly)
+	TObjectPtr<UCharacterStateManager> StateManager;
 };
-
-
 

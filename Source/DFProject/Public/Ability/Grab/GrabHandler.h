@@ -11,7 +11,7 @@ USTRUCT(BlueprintType)
 struct FGrabTargetInfo
 {
 	GENERATED_BODY()
-
+	
 	UPROPERTY()
 	AActor* TargetActor = nullptr;
 
@@ -26,11 +26,12 @@ struct FGrabTargetInfo
 
 	UPROPERTY()
 	FName SocketName = NAME_None;
+
+	// 소켓 근처라면 아이템 사용 가능하도록 bool값?
+	UPROPERTY()
+	bool CanUse = false;
 };
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnGrabStart, const FGrabTargetInfo&, TargetInfo);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnGrabRelease);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnGrabFailed, const FGrabTargetInfo&, TargetInfo);
 
 /**
  * GrabComponent가 필터링과 감지, 흐름을 관리한다면
@@ -54,14 +55,6 @@ public:
 	virtual void ReleaseGrab();
 
 
-	UPROPERTY(BlueprintAssignable, Category = "GrabEvents")
-	FOnGrabStart OnGrabStart;
-
-	UPROPERTY(BlueprintAssignable, Category = "GrabEvents")
-	FOnGrabRelease OnGrabRelease;
-
-	UPROPERTY(BlueprintAssignable, Category = "GrabEvents")
-	FOnGrabFailed OnGrabFailed;
 
 protected:
 	UFUNCTION()

@@ -9,8 +9,13 @@
 #include "Ability/Grab/BodyPartGrabHandler.h"
 #include "Ability/Grab/GrabComponent.h"
 #include "Camera/CameraComponent.h"
+#include "Character/MovementModifierComponent.h"
 #include "Character/BodyPart/BodyPart.h"
 #include "Character/BodyPart/AttachInfoComponent.h"
+#include "Character/State/CharacterStateManager.h"
+#include "Character/State/IdleState.h"
+#include "Character/State/RecoverState.h"
+#include "Character/State/StunnedState.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -43,114 +48,27 @@ ADFCharacter::ADFCharacter()
 	LeftGrabComp = CreateDefaultSubobject<UGrabComponent>(TEXT("LeftGrab"));
 	
 	RightGrabComp = CreateDefaultSubobject<UGrabComponent>(TEXT("RightGrab"));
+
+	MovementModifier = CreateDefaultSubobject<UMovementModifierComponent>(TEXT("MovementModifier"));
+
+	StateManager = CreateDefaultSubobject<UCharacterStateManager>(TEXT("StateManager"));
 }
 
-// Called when the game starts or when spawned
 void ADFCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 	GetMesh()->bPauseAnims = true;
 	MeshOffset = GetMesh()->GetRelativeTransform();
+	StateManager->SetState(NewObject<UIdleState>(this));
 
-	if (!LeftGrabComp || !RightGrabComp)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Grab Components not properly initialized."));
-	}
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Grab Components initialized."));
-		//LeftGrabComp->RegisterComponent();  // Owner를 정확히 설정
-		//RightGrabComp->RegisterComponent();
-		UE_LOG(LogTemp, Log, TEXT("Left Grab Component Owner: %s"), *LeftGrabComp->GetOwner()->GetName());
-		UE_LOG(LogTemp, Log, TEXT("Right Grab Component Owner: %s"), *RightGrabComp->GetOwner()->GetName());
-	}
-	
 	ApplyPhysicalAnimationSettings();
 }
 
 void ADFCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
-	if (bIsRecovering)
-	{
-		PhysicalAnimComp->SetStrengthMultiplyer(RecoverAlpha);
-
-		if (USkeletalMeshComponent* SMesh = GetMesh())
-		{
-			// 현재 회전
-			FQuat CurrentQuat = SMesh->GetComponentQuat();
-
-			// 목표 회전 계산 (Yaw은 Initial 유지, Pitch & Roll은 MeshOffset 기준)
-			FRotator InitialRotator = InitialRecoveryRotation.Rotator();
-			FRotator MeshOffsetRotator = MeshOffset.GetRotation().Rotator();
-
-			FRotator TargetRotator;
-			TargetRotator.Yaw = InitialRotator.Yaw;
-			TargetRotator.Pitch = 0;
-			TargetRotator.Roll = 0;
-
-			FQuat TargetQuat = TargetRotator.Quaternion();
-
-			// 회복 알파 계산 (0에서 1로 서서히 증가)
-			RecoverAlpha = FMath::Clamp(RecoverAlpha + DeltaTime * RecoverSpeed, 0.f, 1.f);
-
-			// 목표 회전과 현재 회전 차이 계산 (이게 실제 회복 체크 기준)
-			FQuat DeltaQuat = TargetQuat * CurrentQuat.Inverse();
-			DeltaQuat.Normalize();
-
-			FVector Axis;
-			float Angle;
-			DeltaQuat.ToAxisAndAngle(Axis, Angle);
-
-			// 회복 알파 계산 (0에서 1로 서서히 증가)
-			RecoverAlpha = FMath::Clamp(RecoverAlpha + DeltaTime * RecoverSpeed, 0.f, 1.f);
-
-			// 부드럽게 회전 보간해서 Torque 방향 설정
-			FQuat BlendedQuat = FQuat::Slerp(CurrentQuat, TargetQuat, RecoverAlpha);
-			FQuat TorqueQuat = BlendedQuat * CurrentQuat.Inverse();
-			TorqueQuat.Normalize();
-
-			FVector TorqueAxis;
-			float TorqueAngle;
-			TorqueQuat.ToAxisAndAngle(TorqueAxis, TorqueAngle);
-
-			if (TorqueAngle > KINDA_SMALL_NUMBER)
-			{
-				FVector Torque = TorqueAxis * TorqueAngle * 5000.0f; // Strength 조절 가능
-				SMesh->AddTorqueInRadians(Torque, NAME_None, true);
-			}
-
-			// Angle 로그 찍기 (실제 Target과의 차이)
-			const float AngleThreshold = 2.0f * (PI / 180.0f);
-			//UE_LOG(LogTemp, Log, TEXT("[Recovery] Current Angle: %.2f degrees / Threshold: %.2f degrees"), 
-			//	FMath::RadiansToDegrees(Angle), 
-			//	FMath::RadiansToDegrees(AngleThreshold));
-
-			if (Angle < AngleThreshold || RecoverAlpha > 0.95f)
-			{
-				FinishGetUp();
-				bIsRecovering = false;
-				RecoverAlpha = 0.f;
-			}
-		}
-	}
-	
-	if (!bIsStunned) return;
-
-	FVector MeshLocation = GetMesh()->GetComponentLocation() - MeshOffset.GetLocation();
-	FVector NewCapsuleLocation = FVector(MeshLocation.X, MeshLocation.Y, MeshLocation.Z);
-	SetActorLocation(NewCapsuleLocation);
-
-	FName ReferenceBone = TEXT("Hips"); // 또는 pelvis, root 등
-	FTransform BoneTransform = GetMesh()->GetSocketTransform(ReferenceBone, RTS_World);
-	FRotator TargetRotation = BoneTransform.GetRotation().Rotator() - MeshOffset.Rotator();
-	TargetRotation.Pitch = 0.0f;
-	TargetRotation.Roll = 0.0f;
-	SetActorRotation(TargetRotation);
 }
 
-// Called to bind functionality to input
 void ADFCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
@@ -231,7 +149,7 @@ void ADFCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 
 void ADFCharacter::Move(const FInputActionValue& Value)
 {
-	if (bIsStunned) return;
+	if (StateManager->CurrentState->GetStateType() == ECharacterStateType::Stunned) return;
 	const FVector2D MoveValue = Value.Get<FVector2D>();
 	
 	// 카메라의 현재 Yaw(좌우) 회전 값을 기준으로 이동 방향 설정
@@ -283,7 +201,9 @@ void ADFCharacter::Multicast_Move_Implementation(const FRotator& NewRotation)
 
 void ADFCharacter::Sprint(const FInputActionValue& Value)
 {
-	if (bIsStunned) return;
+	if (StateManager->CurrentState->GetStateType() == ECharacterStateType::Stunned) return;
+
+	// MaxSpeed 증가
 }
 
 void ADFCharacter::Look(const FInputActionValue& Value)
@@ -294,16 +214,9 @@ void ADFCharacter::Look(const FInputActionValue& Value)
 
 	FRotator CurrentRotation = SpringArm->GetRelativeRotation();
 
-	// X축(Yaw): 좌우 회전 (캐릭터 회전과 분리)
 	if (LookValue.X != 0.0f)
 	{
 		CurrentRotation.Yaw += LookValue.X;
-	}
-
-	// Y축(Pitch): 위아래 회전 (카메라 위아래 움직임)
-	if (LookValue.Y != 0.0f)
-	{
-		//CurrentRotation.Pitch = FMath::Clamp(CurrentRotation.Pitch + LookValue.Y, -80.0f, 80.0f); // 상하 제한
 	}
 
 	SpringArm->SetRelativeRotation(CurrentRotation);
@@ -317,7 +230,7 @@ void ADFCharacter::StartGrab(const FInputActionValue& Value)
 
 void ADFCharacter::Server_StartGrab_Implementation()
 {
-	if (bIsStunned) return;
+	if (StateManager->CurrentState->GetStateType() == ECharacterStateType::Stunned) return;
 
 	if (!BodyParts.Contains(EBodyPartType::LeftFist) || !BodyParts.Contains(EBodyPartType::RightFist)) return;
 
@@ -348,7 +261,7 @@ void ADFCharacter::ReleaseGrab(const FInputActionValue& Value)
 
 void ADFCharacter::Server_ReleaseGrab_Implementation()
 {
-	if (bIsStunned) return;
+	if (StateManager->CurrentState->GetStateType() == ECharacterStateType::Stunned) return;
 
 	if (!BodyParts.Contains(EBodyPartType::LeftFist) || !BodyParts.Contains(EBodyPartType::RightFist)) return;
 
@@ -365,7 +278,7 @@ void ADFCharacter::Server_ReleaseGrab_Implementation()
 
 void ADFCharacter::Server_StopGrab_Implementation()
 {
-	if (bIsStunned) return;
+	if (StateManager->CurrentState->GetStateType() == ECharacterStateType::Stunned) return;
 
 	if (!BodyParts.Contains(EBodyPartType::LeftFist) || !BodyParts.Contains(EBodyPartType::RightFist)) return;
 	
@@ -381,7 +294,7 @@ void ADFCharacter::DropKick(const FInputActionValue& Value)
 
 void ADFCharacter::Server_DropKick_Implementation()
 {
-	if (bIsStunned) return;
+	if (StateManager->CurrentState->GetStateType() == ECharacterStateType::Stunned) return;
 	
 	if (!BodyParts.Contains(EBodyPartType::LeftFoot) || !BodyParts.Contains(EBodyPartType::RightFoot)) return;
 	if (!BodyParts[EBodyPartType::LeftFoot] || !BodyParts[EBodyPartType::RightFoot]) return;
@@ -399,7 +312,7 @@ void ADFCharacter::Headbutt(const FInputActionValue& Value)
 
 void ADFCharacter::Server_Headbutt_Implementation()
 {
-	if (bIsStunned) return;
+	if (StateManager->CurrentState->GetStateType() == ECharacterStateType::Stunned) return;
 	
 	if (!BodyParts.Contains(EBodyPartType::Head) || !BodyParts[EBodyPartType::Head]) return;
 
@@ -412,13 +325,11 @@ void ADFCharacter::Server_Headbutt_Implementation()
 
 void ADFCharacter::StartJump(const FInputActionValue& Value)
 {
-	if (bIsStunned)
+	if (StateManager->CurrentState->GetStateType() == ECharacterStateType::Stunned)
 	{
 		RecoverHandleInput(); // 연타 처리 함수
-		return;
 	}
-	
-	Super::Jump();
+	else Super::Jump();
 }
 
 void ADFCharacter::SpawnBodyParts()
@@ -430,8 +341,7 @@ void ADFCharacter::SpawnBodyParts()
 
 		for (UAttachInfoComponent* Info : AttachInfos)
 		{
-			if (!Info || !IsValid(Info->BodyPartClass)) continue;
-
+			if (!Info || !IsValid(Info->BodyPartClass) || !Info->bAutoSpawnBeginPlay) continue;
 			FActorSpawnParameters SpawnParams;
 			SpawnParams.Owner = this;
 			SpawnParams.Instigator = GetInstigator();
@@ -445,7 +355,7 @@ void ADFCharacter::SpawnBodyParts()
 			BodyParts.Add(Info->BodyPartType, SpawnedPart);
 		}
 
-		if (LeftGrabComp)
+		if (LeftGrabComp && BodyParts.Contains(EBodyPartType::LeftFist))
 		{
 			UBodyPartGrabHandler* LeftHandler = NewObject<UBodyPartGrabHandler>();
 			LeftHandler->SetOwningGrabComponent(LeftGrabComp);
@@ -458,7 +368,7 @@ void ADFCharacter::SpawnBodyParts()
 		}
 
 		// 오른손 핸들러 생성 및 연결
-		if (RightGrabComp)
+		if (RightGrabComp && BodyParts.Contains(EBodyPartType::RightFist))
 		{
 			UBodyPartGrabHandler* RightHandler = NewObject<UBodyPartGrabHandler>();
 			RightHandler->SetOwningGrabComponent(RightGrabComp);
@@ -481,7 +391,7 @@ void ADFCharacter::Punch(const FInputActionValue& Value)
 
 void ADFCharacter::Server_Punch_Implementation()
 {
-	if (bIsStunned) return;
+	if (StateManager->CurrentState->GetStateType() == ECharacterStateType::Stunned) return;
 	if (!BodyParts.Contains(EBodyPartType::LeftFist) || !BodyParts.Contains(EBodyPartType::RightFist)) return;
 
 	ABodyPart* Fist = bLeft ? BodyParts[EBodyPartType::LeftFist] : BodyParts[EBodyPartType::RightFist];
@@ -505,46 +415,27 @@ void ADFCharacter::ApplyPhysicalAnimationSettings()
 
 void ADFCharacter::Stun()
 {
-	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	
-	auto SMesh = GetMesh();
-	SMesh->bPauseAnims = true;
-	SMesh->SetSimulatePhysics(true); // 메시에 피직스 적용 (모두 다)
-	PhysicalAnimComp->SetStrengthMultiplyer(0.0f); // 완전한 래그돌처럼 보이기 위해 래그돌 비율을 최대로
-	bIsStunned = true;
-
+	StateManager->SetState(NewObject<UStunnedState>(this));
 	GetWorldTimerManager().SetTimer(RecoverTimer, this, &ADFCharacter::RecoverStart, 5.f, false);
 }
 
 void ADFCharacter::RecoverStart()
 {
-	if (bIsRecovering) return;
+	if (StateManager->CurrentState->GetStateType() == ECharacterStateType::Recover) return;
 	
-	PhysicalAnimComp->SetStrengthMultiplyer(0.0f);
-	bIsRecovering = true;
-	RecoverAlpha = 0.0f;
+	StateManager->SetState(NewObject<URecoverState>(this));
 	
-	InitialRecoveryRotation = GetMesh()->GetComponentQuat();
 }
 
 void ADFCharacter::FinishGetUp()
 {
-	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-	auto SMesh = GetMesh();
-	SMesh->SetSimulatePhysics(false);
-	
-	PhysicalAnimComp->SetStrengthMultiplyer(0.5f);
-	SMesh->SetRelativeTransform(MeshOffset);
-	GetMesh()->SetAllBodiesBelowSimulatePhysics(PhysicalAnimStartBone, true, false);
-
 	HP = MaxHP;
-	SMesh->bPauseAnims = false;
-	bIsStunned = false;
+	StateManager->SetState(NewObject<UIdleState>(this));
 }
 
 void ADFCharacter::RecoverHandleInput()
 {
-	if (!bIsStunned) return;
+	if (StateManager->CurrentState->GetStateType() != ECharacterStateType::Recover) return;
 
 	RecoverInputCount++;
 
@@ -555,8 +446,20 @@ void ADFCharacter::RecoverHandleInput()
 	}
 }
 
+void ADFCharacter::SetAllBonesMass(float InMass)
+{
+	TArray<FName> BoneNames;
+	GetMesh()->GetBoneNames(BoneNames);
+	for (auto& Name : BoneNames)
+	{
+		float Mass = GetMesh()->GetBoneMass(Name);
+		GetMesh()->SetMassOverrideInKg(Name, InMass, true);
+		UE_LOG(LogTemp, Log, TEXT("Bone %s Mass: %.2f"), *Name.ToString(), Mass);
+	}
+}
+
 float ADFCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator,
-	AActor* DamageCauser)
+                               AActor* DamageCauser)
 {
 	Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
@@ -567,7 +470,7 @@ float ADFCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
 		*GetName(), DamageApplied, HP - DamageApplied,
 		DamageCauser ? *DamageCauser->GetName() : TEXT("알 수 없음"));
 	
-	if (bIsStunned) return DamageApplied;
+	if (StateManager->CurrentState->GetStateType() == ECharacterStateType::Stunned) return DamageApplied;
 
 	HP -= DamageApplied;
 
@@ -578,4 +481,57 @@ float ADFCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
 	}
 
 	return DamageApplied;
+}
+
+AActor* ADFCharacter::GetActualTarget_Implementation()
+{
+	return this;
+}
+
+FVector ADFCharacter::GetResistanceForce_Implementation(AActor* PullingActor)
+{
+	if (!PullingActor || !IsValid(PullingActor)) return FVector::ZeroVector;
+	
+	FVector Velocity = GetMovementComponent()->Velocity;
+	FVector Direction = (GetActorLocation() - PullingActor->GetActorLocation()).GetSafeNormal();
+	// 캐릭터 -> 당기는 액터 방향
+	
+	const float BaseResistance = 300.0f; // 기본 저항 값
+	float Mass = GetMesh()->GetMass();
+
+	// 해당 캐릭터의 이동 방향과 당기는 방향 간의 내적을 계산. (가만히 있으면 0, 같은 방향이면)
+	float MovementAgainst = FVector::DotProduct(Velocity.GetSafeNormal(), Direction);
+	// 속도에 따라 저항력이 바뀌도록. 
+	float DynamicResistance = MovementAgainst * Mass * 50.f;
+
+	// 멀어질 수 있는 거리를 정하도록 거리 계산
+	float Distance = FVector::Dist(GetActorLocation(), PullingActor->GetActorLocation());
+	const float MaxEffectiveDistance = 150.f; // 최대 1.5미터까지 멀어지기 가능
+	const float ResistanceMultiplier = 200.f; // 거리 초과시 저항력 증가 배율
+
+	// 최대 거리 초과 계산. 최대 거리보다 가까우면 0임.
+	float OverDistance = FMath::Max(Distance - MaxEffectiveDistance, 0.f);
+	// 최대 거리보다 가까우면 0.
+	float DistanceBasedResistance = OverDistance * ResistanceMultiplier;
+	// 기본 저항력 + 동적 저항력 + 거리 비례 저항력
+	float TotalResistance = BaseResistance + FMath::Max(DynamicResistance, 0.f) + DistanceBasedResistance;
+	
+	return Direction * TotalResistance; // 총 저항력 -> 이동 방향에 반대되는 방향으로 적용
+}
+
+void ADFCharacter::OnGrabbed_Implementation(AActor* Grabber)
+{
+	if (!Grabber || !MovementModifier) return;
+	MovementModifier->RegisterGrabInteraction(Grabber);
+}
+
+void ADFCharacter::OnGrabReleased_Implementation(AActor* Grabber)
+{
+	if (!Grabber || !MovementModifier) return;
+	MovementModifier->UnregisterGrabInteraction(Grabber);
+}
+
+UPrimitiveComponent* ADFCharacter::GetRoot_Implementation()
+{
+	return GetMesh();
 }

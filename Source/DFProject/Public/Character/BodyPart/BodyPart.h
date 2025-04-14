@@ -19,6 +19,8 @@ enum class EBodyPartType : uint8
 	None,
 	LeftFist,
 	RightFist,
+	LeftArm,
+	RightArm,
 	Head,
 	Body,
 	LeftFoot,
@@ -31,11 +33,9 @@ class DFPROJECT_API ABodyPart : public AActor, public IGrabbable
 	GENERATED_BODY()
 	
 public:	
-	// Sets default values for this actor's properties
 	ABodyPart();
 
 protected:
-	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 public:
@@ -55,6 +55,12 @@ public:
 	void SaveAttackTime();
 
 	TObjectPtr<USphereComponent> GetBodyCollider();
+
+	virtual AActor* GetActualTarget_Implementation() override;
+	virtual FVector GetResistanceForce_Implementation(AActor* PullingActor) override;
+	virtual void OnGrabbed_Implementation(AActor* Grabber) override;
+	virtual void OnGrabReleased_Implementation(AActor* Grabber) override;
+	virtual UPrimitiveComponent* GetRoot_Implementation() override;
 protected:	
 	FTransform GetOffsetTransform(const ACharacter* TargetCharacter, const UAttachInfoComponent* AttachInfo);
 
