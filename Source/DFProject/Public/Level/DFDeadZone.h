@@ -12,9 +12,10 @@ class DFPROJECT_API ADFDeadZone : public ATriggerVolume
 public:
 	ADFDeadZone();
 
-protected:
 	virtual void BeginPlay() override;
 
+protected:
+	
 	// 오버랩 시작 이벤트 (Actor가 데드존에 들어올 때 호출)
 	UFUNCTION()
 	void OnOverlapBegin(AActor* OverlappedActor, AActor* OtherActor);

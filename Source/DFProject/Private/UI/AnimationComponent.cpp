@@ -9,7 +9,6 @@ UAnimationComponent::UAnimationComponent()
 	PrimaryComponentTick.bCanEverTick = false;
 
 	TimelineComp = CreateDefaultSubobject<UTimelineComponent>(TEXT("Timeline"));
-	/*TimelineComp->RegisterComponent();*/
 }
 
 void UAnimationComponent::BeginPlay()
@@ -82,6 +81,8 @@ void UAnimationComponent::OnTimelineUpdate(float Value)
 
 	FTransform Interp = UKismetMathLibrary::TLerp(StartTransform, TargetTransform, Value);
 	OwnerActor->SetActorRelativeTransform(Interp);
+
+	CurrentPlaybackPos = Value;
 }
 
 void UAnimationComponent::OnTimelineFinished()
@@ -89,12 +90,13 @@ void UAnimationComponent::OnTimelineFinished()
 	if (!AnimationMap.Contains(CurrentEvent)) return;
 
 	FAnimationSequence& Sequence = AnimationMap[CurrentEvent];
-
 	Sequence.CurrentStepIndex++;
+	CurrentPlaybackPos = 0.f;
 
 	if (Sequence.CurrentStepIndex >= Sequence.Steps.Num())
 	{
-		CachedTransform = OwnerActor->GetTransform();
+		EndEvent();
+		return;
 	}
 
 	if (Sequence.Steps.IsValidIndex(Sequence.CurrentStepIndex))
@@ -103,19 +105,45 @@ void UAnimationComponent::OnTimelineFinished()
 	}
 }
 
-void UAnimationComponent::PlayEvent(const FName EventName)
+void UAnimationComponent::PlayEvent(UObject* WorldContextObject, FLatentActionInfo LatentInfo, const FName EventName)
 {
 	if (!AnimationMap.Contains(EventName)) return;
+	if (!TimelineComp) return;
+
+	TimelineComp->SetPlaybackPosition(CurrentPlaybackPos, false);
 
 	FAnimationSequence& Sequence = AnimationMap[EventName];
 	Sequence.CurrentStepIndex = 0;
 
 	OwnerActor->SetActorTransform(CachedTransform);
 
-	if (Sequence.Steps.Num() == 0) return;
-
 	CurrentEvent = EventName;
+	CurrentLatentInfo = LatentInfo;
 	PlayStep(Sequence.Steps[Sequence.CurrentStepIndex]);
+
+
+	if (UWorld* World = GetWorld())
+	{
+		FLatentActionManager& LatentManager = World->GetLatentActionManager();
+		LatentManager.RemoveActionsForObject(LatentInfo.CallbackTarget);
+		LatentManager.AddNewAction(LatentInfo.CallbackTarget, LatentInfo.UUID, new FAnimationLatentAction(LatentInfo));
+	}
+}
+
+void UAnimationComponent::EndEvent()
+{
+	FAnimationSequence& Sequence = AnimationMap[CurrentEvent];
+
+	CachedTransform = OwnerActor->GetTransform();
+
+	if (UWorld* World = GetWorld())
+	{
+		FLatentActionManager& LatentManager = World->GetLatentActionManager();
+		if (auto* Action = LatentManager.FindExistingAction<FAnimationLatentAction>(CurrentLatentInfo.CallbackTarget, CurrentLatentInfo.UUID))
+		{
+			Action->bIsDone = true;
+		}
+	}
 }
 
 void UAnimationComponent::PlayStep(FAnimationData& Data)
@@ -128,11 +156,6 @@ void UAnimationComponent::PlayStep(FAnimationData& Data)
 
 	SaveActorTransform(Data);
 
-	TimelineComp->SetPlaybackPosition(0.f, false);
-	TimelineComp->SetLooping(false);
-	TimelineComp->SetPlayRate(1.f);
-	TimelineComp->SetTimelineLengthMode(ETimelineLengthMode::TL_LastKeyFrame);
-
 	switch (Data.PlayMode)
 	{
 	case EAnimationPlayMode::Play:
@@ -140,7 +163,6 @@ void UAnimationComponent::PlayStep(FAnimationData& Data)
 		break;
 
 	case EAnimationPlayMode::Reverse:
-		TimelineComp->SetPlaybackPosition(TimelineComp->GetTimelineLength(), false);
 		TimelineComp->Reverse();
 		break;
 

@@ -3,6 +3,7 @@
 #include "Item/DFBattleItem.h"
 #include "Item/DFItemAbilityComponent.h"
 #include "Components/SphereComponent.h"
+#include "PhysicsEngine/PhysicalAnimationComponent.h"
 
 ADFItemBaseActor::ADFItemBaseActor()
 {
@@ -12,6 +13,8 @@ ADFItemBaseActor::ADFItemBaseActor()
 	SetRootComponent(ItemMesh);
 	ItemMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	ItemMesh->SetCollisionObjectType(ECC_PhysicsBody);	
+
+	PhysicalAnimComp = CreateDefaultSubobject<UPhysicalAnimationComponent>(TEXT("PhysicsAnimComp"));
 
 	GripArea = CreateDefaultSubobject<USphereComponent>(TEXT("GripArea"));
 	GripArea->InitSphereRadius(50.0f);
@@ -39,16 +42,16 @@ void ADFItemBaseActor::SetupItem(UDFItemInstance* NewInstance)
 	{		
 	ItemInstance = NewInstance;
 	ItemMesh->SetSkeletalMesh(NewInstance->ItemData->ItemMesh);
+	ItemMesh->SetSimulatePhysics(true);
+	ItemMesh->SetAnimationMode(EAnimationMode::AnimationBlueprint);
+	ItemMesh->SetAnimInstanceClass(NewInstance->ItemData->AnimBP);
+
+	PhysicalAnimComp->SetSkeletalMeshComponent(ItemMesh);
 
 	GripArea->AttachToComponent(ItemMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("HandGripSocket"));
 
-	ItemMesh->SetSimulatePhysics(true);
-	ItemMesh->SetAllBodiesBelowSimulatePhysics("Root", false, false);
-	ItemMesh->SetAllBodiesBelowPhysicsBlendWeight("Root", 0.0f, true);
-
 	AttachAbilities();
-	}
-	
+	}	
 }
 
 void ADFItemBaseActor::OnGripAreaBeginOverlap(
@@ -89,8 +92,27 @@ void ADFItemBaseActor::AttachAbilities()
 				NewAbility->RegisterComponent();
 				AddInstanceComponent(NewAbility);
 				NewAbility->Activate(true);
+				ItemAbilities.Add(NewAbility);
 			}
 		}
+	}
+}
+
+void ADFItemBaseActor::AbilitiesMainAction()
+{
+	if (ItemAbilities.Num() == 0)
+	{
+		return;
+	}
+
+	for (UDFItemAbilityComponent* Ability : ItemAbilities)
+	{
+		if (!IsValid(Ability))
+		{
+			continue;
+		}
+
+		Ability->MainAction();
 	}
 }
 

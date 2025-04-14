@@ -5,7 +5,24 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "Components/TimelineComponent.h"
+#include "LatentActions.h"
 #include "AnimationComponent.generated.h"
+
+class FAnimationLatentAction : public FPendingLatentAction
+{
+public:
+	bool bIsDone = false;
+	FLatentActionInfo Info;
+
+	FAnimationLatentAction(const FLatentActionInfo& InInfo)
+		: Info(InInfo) {
+	}
+
+	virtual void UpdateOperation(FLatentResponse& Response) override
+	{
+		Response.FinishAndTriggerIf(bIsDone, Info.ExecutionFunction, Info.Linkage, Info.CallbackTarget);
+	}
+};
 
 UENUM(BlueprintType)
 enum class EAnimationPlayMode : uint8
@@ -80,11 +97,15 @@ protected:
 	AActor* OwnerActor;
 
 	/* timeline variables */
+	float CurrentPlaybackPos = 0.f;
 	FOnTimelineFloat Progress;
 	FOnTimelineEvent Finished;
 
 	/* Timer */
 	FTimerHandle TimerHandle;
+
+	/* Latent Variable */
+	FLatentActionInfo CurrentLatentInfo;
 
 	/* transform method */
 	void SaveActorTransform(const FAnimationData& Data);
@@ -104,7 +125,9 @@ protected:
 
 public:
 	/* event start */
-	UFUNCTION(BlueprintCallable)
-	void PlayEvent(const FName EventName);
+	UFUNCTION(BlueprintCallable, meta = (Latent, LatentInfo = "LatentInfo", WorldContext = "WorldContextObject"))
+	void PlayEvent(UObject* WorldContextObject, FLatentActionInfo LatentInfo, const FName EventName);
+protected:
+	void EndEvent();
 
 };

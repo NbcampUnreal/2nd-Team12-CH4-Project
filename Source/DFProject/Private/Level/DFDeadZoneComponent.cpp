@@ -1,15 +1,10 @@
-#include "Level/DFDeadZoneComponent.h"
+ï»¿#include "Level/DFDeadZoneComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Server/DFBattleGameMode.h"
 #include "GameFramework/Pawn.h"
 
 UDFDeadZoneComponent::UDFDeadZoneComponent()
 {
-    // ÀÌ ÄÄÆ÷³ÍÆ®´Â BlueprintSpawnableComponentÀÌ¹Ç·Î ¿¡µğÅÍ¿¡¼­ Ãß°¡ÇÒ ¼ö ÀÖ½À´Ï´Ù.
-// ±âº»ÀûÀ¸·Î UBoxComponent¸¦ »ç¿ëÇÏ¹Ç·Î, Å©±â³ª Ãæµ¹ ÇÁ¸®¼ÂÀº ¿¡µğÅÍ¿¡¼­ Á¶Á¤ °¡´ÉÇÏÁö¸¸,
-// ¿©±â¼­ ±âº» Ãæµ¹ ¼³Á¤À» °­Á¦ÇÒ ¼ö ÀÖ½À´Ï´Ù.
-
-// Overlap ÀÌº¥Æ®¸¦ È°¼ºÈ­ÇÏµµ·Ï ¼³Á¤
     SetCollisionEnabled(ECollisionEnabled::QueryOnly);
     SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Overlap);
     SetGenerateOverlapEvents(true);
@@ -19,7 +14,7 @@ void UDFDeadZoneComponent::BeginPlay()
 {
     Super::BeginPlay();
 
-    // BeginPlay¿¡¼­ OnComponentBeginOverlap ÀÌº¥Æ®¸¦ ¹ÙÀÎµùÇÕ´Ï´Ù.
+    // BeginPlayì—ì„œ OnComponentBeginOverlap ì´ë²¤íŠ¸ë¥¼ ë°”ì¸ë”©í•©ë‹ˆë‹¤.
     OnComponentBeginOverlap.AddDynamic(this, &UDFDeadZoneComponent::OnOverlapBegin);
 
 }
@@ -33,13 +28,13 @@ void UDFDeadZoneComponent::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, A
 
     UE_LOG(LogTemp, Log, TEXT("UDFDeadZoneComponent: Overlap detected with Actor: %s"), *OtherActor->GetName());
 
-    // OtherActor°¡ PawnÀÎÁö È®ÀÎÇÕ´Ï´Ù.
+    // OtherActorê°€ Pawnì¸ì§€ í™•ì¸í•©ë‹ˆë‹¤.
     APawn* OverlappingPawn = Cast<APawn>(OtherActor);
     if (OverlappingPawn && IsValid(OverlappingPawn))
     {
         UE_LOG(LogTemp, Log, TEXT("UDFDeadZoneComponent: Pawn %s entered the dead zone."), *OverlappingPawn->GetName());
 
-        // ¼­¹ö ±ÇÇÑ(Authority)ÀÌ ÀÖ´Â °æ¿ì¿¡¸¸ Ã³¸® (Áï, ¼­¹ö¿¡¼­¸¸ GameMode ·ÎÁ÷À» È£Ãâ)
+        // ì„œë²„ ê¶Œí•œ(Authority)ì´ ìˆëŠ” ê²½ìš°ì—ë§Œ ì²˜ë¦¬ (ì¦‰, ì„œë²„ì—ì„œë§Œ GameMode ë¡œì§ì„ í˜¸ì¶œ)
         if (OverlappingPawn->HasAuthority())
         {
             ADFBattleGameMode* GM = Cast<ADFBattleGameMode>(UGameplayStatics::GetGameMode(GetWorld()));

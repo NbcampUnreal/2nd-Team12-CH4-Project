@@ -4,6 +4,8 @@
 #include "Components/ActorComponent.h"
 #include "DFItemAbilityComponent.generated.h"
 
+class UDFBattleItem;
+class ADFItemBaseActor;
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class DFPROJECT_API UDFItemAbilityComponent : public UActorComponent
@@ -13,10 +15,15 @@ class DFPROJECT_API UDFItemAbilityComponent : public UActorComponent
 public:	
 	UDFItemAbilityComponent();
 
-protected:
-	virtual void BeginPlay() override;
-
-
 	virtual void MainAction();
 
+protected:
+	virtual void BeginPlay() override;
+	virtual void PlayActionSound();
+
+	ADFItemBaseActor* ParentActor;
+	UDFBattleItem* ParentItemData;
+	USkeletalMeshComponent* ParentMesh;
+	UAnimMontage* ParentActionAnim;
+	USoundBase* ParentActionsound;
 };

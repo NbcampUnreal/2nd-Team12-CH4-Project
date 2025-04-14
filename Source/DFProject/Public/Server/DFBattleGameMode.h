@@ -60,6 +60,9 @@ public:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Game Settings")
     float GracePeriod;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Game Settings")
+	ACameraActor* SpectatorCamera; // 관전 카메라 액터 (사전에 레벨에 배치해둔 카메라 액터를 참조)
+
 protected:
     // 게임이 시작된 시간을 저장 (초 단위)
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Game Settings")

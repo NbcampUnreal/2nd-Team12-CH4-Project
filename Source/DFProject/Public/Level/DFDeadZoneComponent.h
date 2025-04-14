@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 #include "CoreMinimal.h"
 #include "Components/StaticMeshComponent.h"
@@ -15,7 +15,7 @@ public:
 protected:
     virtual void BeginPlay() override;
 
-    // ¿À¹ö·¦ ÀÌº¥Æ® ÇÚµé·¯ (UBoxComponentÀÇ OnComponentBeginOverlap°ú ¿¬°áµÊ)
+    // ì˜¤ë²„ë© ì´ë²¤íŠ¸ í•¸ë“¤ëŸ¬ (UBoxComponentì˜ OnComponentBeginOverlapê³¼ ì—°ê²°ë¨)
     UFUNCTION()
     void OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
         UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,

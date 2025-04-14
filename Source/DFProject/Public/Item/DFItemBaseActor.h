@@ -8,6 +8,8 @@
 
 class UDFItemInstance;
 class USphereComponent;
+class UDFItemAbilityComponent;
+class UPhysicalAnimationComponent;
 
 UCLASS()
 class DFPROJECT_API ADFItemBaseActor : public AActor
@@ -25,6 +27,12 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item")
 	USphereComponent* GripArea;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item")
+	TArray<UDFItemAbilityComponent*> ItemAbilities;
+
+	UPROPERTY(VisibleAnywhere, Category = "Physics")
+	UPhysicalAnimationComponent* PhysicalAnimComp;
 
 
 	UFUNCTION()
@@ -46,7 +54,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Item")
 	virtual void SetupItem(UDFItemInstance* NewItemInstance);
 
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "Item")
+	void AbilitiesMainAction();
+
+	UFUNCTION(BlueprintCallable, Category = "Item")
 	FName GetCurrentnItemId() const;
 
 protected:
