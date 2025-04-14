@@ -27,7 +27,7 @@ void ADFBattleGameMode::BeginPlay()
     TArray<AActor*> FoundCameras;
     UGameplayStatics::GetAllActorsOfClass(GetWorld(), ACameraActor::StaticClass(), FoundCameras);
 
-    // "Spectator" 이름의 카메라 액터를 찾는다.
+    // "Spectator" 라는 액터 태크를 가진 카메라 액터를 찾는다.
     for (AActor* Actor : FoundCameras)
     {
         if (Actor->Tags.Contains(TEXT("Spectator")))

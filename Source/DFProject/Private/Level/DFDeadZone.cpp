@@ -7,7 +7,7 @@
 
 ADFDeadZone::ADFDeadZone()
 {
-    PrimaryActorTick.bCanEverTick = true;
+
 }
 
 void ADFDeadZone::BeginPlay()
