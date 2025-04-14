@@ -180,6 +180,12 @@ bool UBTTask_Move::ShouldJump(ADFCharacter* MyCharacter) const
 	{
 		AActor* HitActor = HitResult.GetActor();
 
+		if (HitActor && HitActor->GetClass()->ImplementsInterface(UGrabbable::StaticClass()))
+		{
+			LOG_WARNING(TEXT("ShouldJump: HitActor is Grabbable. Ignore jump."));
+			return false;
+		}
+
 		if (HitActor && HitActor->IsA<ADFCharacter>())
 		{
 			FHitResult ObstacleHit;

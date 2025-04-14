@@ -35,10 +35,6 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Blackboard")
 	FName IsNearDangerKey;
 
-	///** 회피 거리 도달 후 회피 종료 기준 거리 */
-	//UPROPERTY(EditAnywhere, Category = "Config")
-	//float ClearDistanceThreshold = 800.f;
-
 	/** 위험 지점으로부터 피할 거리 */
 	UPROPERTY(EditAnywhere, Category = "Config")
 	float AvoidDistance = 600.f;

@@ -48,28 +48,27 @@ void UBTService_AvoidDanger::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* 
 
 	const FVector MyLocation = AIPawn->GetActorLocation();
 
-	// ✅ Danger 상태 중일 때만 해제 조건 검사
-	const bool bCurrentlyInDanger = BlackboardComp->GetValueAsBool(IsNearDangerKey);
-	if (bCurrentlyInDanger)
+	//  Danger 해제 판단
+	if (BlackboardComp->GetValueAsBool(IsNearDangerKey))
 	{
 		const FVector AvoidLoc = BlackboardComp->GetValueAsVector(AvoidLocationKey);
-		const float DistanceToAvoidTarget = FVector::Dist2D(MyLocation, AvoidLoc);
-		const float EscapeDistanceThreshold = 400.f;
-
-		if (!AvoidLoc.IsNearlyZero() && DistanceToAvoidTarget > EscapeDistanceThreshold)
+		if (!AvoidLoc.IsNearlyZero())
 		{
-			LOG_WARNING(TEXT("✅ 충분히 회피 성공 → Danger 해제"));
-			BlackboardComp->ClearValue(AvoidLocationKey);
-			BlackboardComp->SetValueAsBool(IsNearDangerKey, false);
-			return;
+			const float Distance = FVector::Dist2D(MyLocation, AvoidLoc);
+			if (Distance > 400.f)
+			{
+				LOG_WARNING(TEXT("✅ 충분히 회피 성공 → Danger 해제"));
+				BlackboardComp->ClearValue(AvoidLocationKey);
+				BlackboardComp->SetValueAsBool(IsNearDangerKey, false);
+				return;
+			}
 		}
 	}
 
-	// ✅ Danger 감지 시작
+	//  위험 감지
 	FVector DangerDirection = FVector::ZeroVector;
 	bool bDangerDetected = false;
 
-	// NavMesh 경계 감지 방향
 	FVector NavEdgeDir = FVector::ZeroVector;
 	if (IsNearNavEdge(MyLocation, NavEdgeDir))
 	{
@@ -77,7 +76,6 @@ void UBTService_AvoidDanger::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* 
 		bDangerDetected = true;
 	}
 
-	// DeadZone 감지 방향
 	FVector DeadZoneDir = FVector::ZeroVector;
 	if (IsNearDeadZones(MyLocation, DeadZoneDir))
 	{
@@ -85,11 +83,11 @@ void UBTService_AvoidDanger::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* 
 		bDangerDetected = true;
 	}
 
-	// ✅ Danger 감지됨 → 회피 위치 설정
+	//  회피 위치 계산
 	if (bDangerDetected && !DangerDirection.IsNearlyZero())
 	{
-		const FVector AvoidDir = -DangerDirection.GetSafeNormal();
-		const FVector RawAvoidLoc = MyLocation + AvoidDir * AvoidDistance;
+		const FVector AvoidDir = DangerDirection.GetSafeNormal2D();
+		const FVector RawAvoidLoc = MyLocation + AvoidDir * AvoidDistance * 2.f;
 
 		if (bDebugLog)
 		{
@@ -99,31 +97,31 @@ void UBTService_AvoidDanger::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* 
 		}
 
 		FNavLocation Projected;
-		if (UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(GetWorld()))
+		UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(GetWorld());
+
+		if (NavSys && NavSys->ProjectPointToNavigation(RawAvoidLoc, Projected, FVector(100.f)))
 		{
-			if (NavSys->ProjectPointToNavigation(RawAvoidLoc, Projected, FVector(100.f)))
+			BlackboardComp->SetValueAsVector(AvoidLocationKey, Projected.Location);
+			LOG_WARNING(TEXT("✅ Projected AvoidLocation: %s"), *Projected.Location.ToString());
+			DrawDebugSphere(GetWorld(), Projected.Location, 30.f, 12, FColor::Green, false, 1.0f);
+		}
+		else
+		{
+			// fallback → 같은 방향 뒤쪽으로 넉넉히 던짐
+			const FVector SearchOrigin = MyLocation + AvoidDir * 300.f;
+			FNavLocation RandomSafeLoc;
+
+			if (NavSys && NavSys->GetRandomReachablePointInRadius(SearchOrigin, 1000.f, RandomSafeLoc))
 			{
-				BlackboardComp->SetValueAsVector(AvoidLocationKey, Projected.Location);
-				LOG_WARNING(TEXT("✅ Projected AvoidLocation: %s"), *Projected.Location.ToString());
-				DrawDebugSphere(GetWorld(), Projected.Location, 30.f, 12, FColor::Green, false, 1.0f);
+				BlackboardComp->SetValueAsVector(AvoidLocationKey, RandomSafeLoc.Location);
+				LOG_WARNING(TEXT("✅ Fallback SafeLocation: %s"), *RandomSafeLoc.Location.ToString());
+				DrawDebugSphere(GetWorld(), RandomSafeLoc.Location, 30.f, 12, FColor::Blue, false, 1.0f);
 			}
 			else
 			{
-				// fallback
-				const FVector SearchOrigin = MyLocation + AIPawn->GetActorForwardVector() * 300.f;
-				FNavLocation RandomSafeLoc;
-				if (NavSys->GetRandomReachablePointInRadius(SearchOrigin, 1000.f, RandomSafeLoc))
-				{
-					BlackboardComp->SetValueAsVector(AvoidLocationKey, RandomSafeLoc.Location);
-					LOG_WARNING(TEXT("✅ Fallback SafeLocation: %s"), *RandomSafeLoc.Location.ToString());
-					DrawDebugSphere(GetWorld(), RandomSafeLoc.Location, 30.f, 12, FColor::Blue, false, 1.0f);
-				}
-				else
-				{
-					LOG_WARNING(TEXT("❌ Fallback 탐색 실패 → Danger 해제"));
-					BlackboardComp->ClearValue(AvoidLocationKey);
-					bDangerDetected = false;
-				}
+				LOG_WARNING(TEXT("❌ Fallback 탐색 실패 → Danger 해제"));
+				BlackboardComp->ClearValue(AvoidLocationKey);
+				bDangerDetected = false;
 			}
 		}
 	}
@@ -132,7 +130,7 @@ void UBTService_AvoidDanger::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* 
 		BlackboardComp->ClearValue(AvoidLocationKey);
 	}
 
-	// ✅ Danger 상태 최종 반영
+	//  최종 Danger 상태 반영
 	BlackboardComp->SetValueAsBool(IsNearDangerKey, bDangerDetected);
 }
 
@@ -143,22 +141,30 @@ bool UBTService_AvoidDanger::IsNearNavEdge(const FVector& Location, FVector& Out
 	UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(GetWorld());
 	if (!NavSys) return false;
 
-	const FVector DetectDirection = FVector(1, 0, -1).GetSafeNormal(); // 오른쪽 아래
-	const float DetectDistance = 800.f; // 멀리 쏴본다
-	const FVector TestPoint = Location + DetectDirection * DetectDistance;
+	const TArray<FVector> Directions = {
+		{1, 0, -0.3f}, {-1, 0, -0.3f},
+		{0, 1, -0.3f}, {0, -1, -0.3f},
+		{1, 1, -0.3f}, {-1, 1, -0.3f},
+		{1, -1, -0.3f}, {-1, -1, -0.3f},
+	};
 
-	FNavLocation Projected;
-	bool bOnNav = NavSys->ProjectPointToNavigation(TestPoint, Projected, FVector(200.f)); // 큰 Extent
+	const float DetectDistance = 600.f;
 
-	if (!bOnNav)
+	for (const FVector& Dir : Directions)
 	{
-		OutDirection = FVector(-DetectDirection.X, -DetectDirection.Y, 0.f).GetSafeNormal(); // XY 반대방향
-		LOG_WARNING(TEXT("✅ 경계 감지됨 (검사 좌표: %s) → 회피 방향: %s"), *TestPoint.ToString(), *OutDirection.ToString());
-		DrawDebugSphere(GetWorld(), TestPoint, 30.f, 12, FColor::Red, false, 2.f);
-		return true;
+		const FVector TestPoint = Location + Dir.GetSafeNormal() * DetectDistance;
+		FNavLocation Projected;
+
+		bool bOnNav = NavSys->ProjectPointToNavigation(TestPoint, Projected, FVector(200.f));
+		if (!bOnNav)
+		{
+			OutDirection = FVector(-Dir.X, -Dir.Y, 0.f).GetSafeNormal();
+			LOG_WARNING(TEXT("✅ NavMesh 경계 감지 방향: %s → 회피 방향: %s"), *Dir.ToString(), *OutDirection.ToString());
+			DrawDebugSphere(GetWorld(), TestPoint, 30.f, 12, FColor::Red, false, 2.0f);
+			return true;
+		}
 	}
 
-	DrawDebugSphere(GetWorld(), TestPoint, 30.f, 12, FColor::Green, false, 2.f);
 	return false;
 }
 
