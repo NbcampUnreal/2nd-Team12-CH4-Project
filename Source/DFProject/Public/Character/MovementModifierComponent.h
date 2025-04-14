@@ -46,6 +46,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category="MovementModifier")
 	void UnregisterGrabInteraction(AActor* TargetActor);
 
+	UFUNCTION(BlueprintCallable, Category="MovementModifier")
+	bool UnregisterAll();
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MovementModifier")
 	bool bApplyGrabResistance = true;
 

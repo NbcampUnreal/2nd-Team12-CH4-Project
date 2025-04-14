@@ -28,6 +28,8 @@ void UStunnedState::Enter(ADFCharacter* Character)
 	SMesh->bPauseAnims = true;
 	SMesh->SetSimulatePhysics(true); // 메시에 피직스 적용 (모두 다)
 	Character->PhysicalAnimComp->SetStrengthMultiplyer(0.0f); // 완전한 래그돌처럼 보이기 위해 래그돌 비율을 최대로
+
+	Character->Server_ReleaseGrab_Implementation();
 }
 
 void UStunnedState::Exit(ADFCharacter* Character)

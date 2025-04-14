@@ -42,9 +42,6 @@ public:
 	UFUNCTION(BlueprintCallable, NetMulticast, Reliable, Category="BodyPart")
 	virtual void Attach(ACharacter* TargetCharacter, const UAttachInfoComponent* AttachInfo);
 	
-	UFUNCTION(BlueprintCallable, Category="BodyPart")
-	virtual void ApplyImpulse();
-	
 	UFUNCTION(BlueprintCallable, Category="Attack")
 	void PerformAttack();
 
@@ -55,12 +52,14 @@ public:
 	void SaveAttackTime();
 
 	TObjectPtr<USphereComponent> GetBodyCollider();
+	TObjectPtr<ACharacter> GetOwningCharacter();
 
 	virtual AActor* GetActualTarget_Implementation() override;
 	virtual FVector GetResistanceForce_Implementation(AActor* PullingActor) override;
 	virtual void OnGrabbed_Implementation(AActor* Grabber) override;
 	virtual void OnGrabReleased_Implementation(AActor* Grabber) override;
 	virtual UPrimitiveComponent* GetRoot_Implementation() override;
+
 protected:	
 	FTransform GetOffsetTransform(const ACharacter* TargetCharacter, const UAttachInfoComponent* AttachInfo);
 

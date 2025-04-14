@@ -4,19 +4,20 @@
 #include "Character/DFCharacter.h"
 
 #include "EnhancedInputComponent.h"
-#include "Ability/HeadbuttAbilityStrategy.h"
-#include "Ability/PunchAbilityStrategy.h"
+#include "Ability/Strategy/HeadbuttAbilityStrategy.h"
+#include "Ability/Strategy/PunchAbilityStrategy.h"
 #include "Ability/Grab/BodyPartGrabHandler.h"
 #include "Ability/Grab/GrabComponent.h"
+#include "Ability/Strategy/AbilityStrategyManager.h"
 #include "Camera/CameraComponent.h"
 #include "Character/MovementModifierComponent.h"
 #include "Character/BodyPart/BodyPart.h"
 #include "Character/BodyPart/AttachInfoComponent.h"
 #include "Character/State/CharacterStateManager.h"
+#include "Character/State/GrabbedState.h"
 #include "Character/State/IdleState.h"
 #include "Character/State/RecoverState.h"
 #include "Character/State/StunnedState.h"
-#include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "PhysicsEngine/PhysicalAnimationComponent.h"
@@ -51,6 +52,8 @@ ADFCharacter::ADFCharacter()
 
 	MovementModifier = CreateDefaultSubobject<UMovementModifierComponent>(TEXT("MovementModifier"));
 
+	AbilityManager = CreateDefaultSubobject<UAbilityStrategyManager>(TEXT("AbilityManager"));
+	
 	StateManager = CreateDefaultSubobject<UCharacterStateManager>(TEXT("StateManager"));
 }
 
@@ -62,6 +65,7 @@ void ADFCharacter::BeginPlay()
 	StateManager->SetState(NewObject<UIdleState>(this));
 
 	ApplyPhysicalAnimationSettings();
+	RegisterAbilities();
 }
 
 void ADFCharacter::Tick(float DeltaTime)
@@ -92,9 +96,23 @@ void ADFCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 	
 	EnhancedInputComponent->BindAction(
 		SprintAction,
-		ETriggerEvent::Triggered,
+		ETriggerEvent::Started,
 	this,
-		&ADFCharacter::Sprint
+		&ADFCharacter::StartSprint
+	);
+
+	EnhancedInputComponent->BindAction(
+		SprintAction,
+		ETriggerEvent::Canceled,
+	this,
+		&ADFCharacter::StopSprint
+	);
+
+	EnhancedInputComponent->BindAction(
+	SprintAction,
+		ETriggerEvent::Completed,
+	this,
+		&ADFCharacter::StopSprint
 	);
 	
 	EnhancedInputComponent->BindAction(
@@ -113,23 +131,24 @@ void ADFCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 
 	EnhancedInputComponent->BindAction(
 	GrabAction,
-	ETriggerEvent::Completed, // 누르는 순간
+	ETriggerEvent::Canceled, // 떼는 순간
 	this,
 	&ADFCharacter::StopGrab
 	);
 
 	EnhancedInputComponent->BindAction(
-	PunchAction,
-	ETriggerEvent::Completed,
+	GrabAction,
+	ETriggerEvent::Completed, // 떼는 순간
 	this,
-	&ADFCharacter::Punch
+	&ADFCharacter::StopGrab
 	);
+
 	
 	EnhancedInputComponent->BindAction(
-	DropKickAction,
+	PunchAction,
 	ETriggerEvent::Triggered,
 	this,
-	&ADFCharacter::DropKick
+	&ADFCharacter::Punch
 	);
 
 	EnhancedInputComponent->BindAction(
@@ -145,6 +164,14 @@ void ADFCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 	this,
 	&ADFCharacter::ReleaseGrab
 	);
+}
+
+bool ADFCharacter::EventOnDestroy()
+{
+	if (RightGrabComp) RightGrabComp->Released();
+	if (LeftGrabComp) LeftGrabComp->Released();
+	
+	return MovementModifier->UnregisterAll();;
 }
 
 void ADFCharacter::Move(const FInputActionValue& Value)
@@ -199,11 +226,16 @@ void ADFCharacter::Multicast_Move_Implementation(const FRotator& NewRotation)
 	SetActorRotation(NewRotation);
 }
 
-void ADFCharacter::Sprint(const FInputActionValue& Value)
+void ADFCharacter::StartSprint(const FInputActionValue& Value)
 {
 	if (StateManager->CurrentState->GetStateType() == ECharacterStateType::Stunned) return;
 
-	// MaxSpeed 증가
+	GetCharacterMovement()->MaxWalkSpeed = 1000.f;
+}
+
+void ADFCharacter::StopSprint(const FInputActionValue& Value)
+{
+	GetCharacterMovement()->MaxWalkSpeed = 600.f;
 }
 
 void ADFCharacter::Look(const FInputActionValue& Value)
@@ -230,7 +262,7 @@ void ADFCharacter::StartGrab(const FInputActionValue& Value)
 
 void ADFCharacter::Server_StartGrab_Implementation()
 {
-	if (StateManager->CurrentState->GetStateType() == ECharacterStateType::Stunned) return;
+	if (StateManager->CurrentState->GetStateType() != ECharacterStateType::Idle) return;
 
 	if (!BodyParts.Contains(EBodyPartType::LeftFist) || !BodyParts.Contains(EBodyPartType::RightFist)) return;
 
@@ -261,7 +293,7 @@ void ADFCharacter::ReleaseGrab(const FInputActionValue& Value)
 
 void ADFCharacter::Server_ReleaseGrab_Implementation()
 {
-	if (StateManager->CurrentState->GetStateType() == ECharacterStateType::Stunned) return;
+	if (StateManager->CurrentState->GetStateType() == ECharacterStateType::Idle) return;
 
 	if (!BodyParts.Contains(EBodyPartType::LeftFist) || !BodyParts.Contains(EBodyPartType::RightFist)) return;
 
@@ -274,6 +306,11 @@ void ADFCharacter::Server_ReleaseGrab_Implementation()
 	{
 		RightGrabComp->Released();
 	}
+
+	if (StateManager->CurrentState->GetStateType() == ECharacterStateType::Grabbed)
+		StateManager->SetState(NewObject<UIdleState>(this));
+	else if (StateManager->CurrentState->GetStateType() == ECharacterStateType::Stunned)
+		return;
 }
 
 void ADFCharacter::Server_StopGrab_Implementation()
@@ -285,24 +322,6 @@ void ADFCharacter::Server_StopGrab_Implementation()
 	if (LeftGrabComp && LeftGrabComp->GetCurrentGrabState() != EGrabState::Grabbing) LeftGrabComp->StopGrab();
 
 	if (RightGrabComp  && RightGrabComp->GetCurrentGrabState() != EGrabState::Grabbing) RightGrabComp->StopGrab();
-}
-
-void ADFCharacter::DropKick(const FInputActionValue& Value)
-{
-	Server_DropKick();
-}
-
-void ADFCharacter::Server_DropKick_Implementation()
-{
-	if (StateManager->CurrentState->GetStateType() == ECharacterStateType::Stunned) return;
-	
-	if (!BodyParts.Contains(EBodyPartType::LeftFoot) || !BodyParts.Contains(EBodyPartType::RightFoot)) return;
-	if (!BodyParts[EBodyPartType::LeftFoot] || !BodyParts[EBodyPartType::RightFoot]) return;
-
-	if (!GetCharacterMovement()->IsFalling()) return;
-
-	BodyParts[EBodyPartType::LeftFoot]->ApplyImpulse();
-	BodyParts[EBodyPartType::RightFoot]->ApplyImpulse();
 }
 
 void ADFCharacter::Headbutt(const FInputActionValue& Value)
@@ -391,15 +410,15 @@ void ADFCharacter::Punch(const FInputActionValue& Value)
 
 void ADFCharacter::Server_Punch_Implementation()
 {
-	if (StateManager->CurrentState->GetStateType() == ECharacterStateType::Stunned) return;
+	if (StateManager->CurrentState->GetStateType() != ECharacterStateType::Idle) return;
+	
 	if (!BodyParts.Contains(EBodyPartType::LeftFist) || !BodyParts.Contains(EBodyPartType::RightFist)) return;
 
 	ABodyPart* Fist = bLeft ? BodyParts[EBodyPartType::LeftFist] : BodyParts[EBodyPartType::RightFist];
+	FName AbilityName = bLeft ? TEXT("LeftPunch") : TEXT("RightPunch");
+	
 	if (!Fist) return;
-	UAbilityStrategy* PunchStrategy = NewObject<UPunchAbilityStrategy>(this); // this = Outer
-
-	Fist->SetAttackStrategy(PunchStrategy);
-	Fist->PerformAttack();
+	AbilityManager->StartAbility(AbilityName, Fist);
 
 	bLeft = !bLeft;	
 }
@@ -413,6 +432,15 @@ void ADFCharacter::ApplyPhysicalAnimationSettings()
 	GetMesh()->SetAllBodiesBelowSimulatePhysics(PhysicalAnimStartBone, true, false);
 }
 
+void ADFCharacter::RegisterAbilities()
+{
+	AbilityManager = NewObject<UAbilityStrategyManager>(this);
+	AbilityManager->RegisterAbility(TEXT("LeftPunch"), NewObject<UPunchAbilityStrategy>(this));
+	AbilityManager->RegisterAbility(TEXT("RightPunch"), NewObject<UPunchAbilityStrategy>(this));
+	AbilityManager->RegisterAbility(TEXT("Headbutt"), NewObject<UHeadbuttAbilityStrategy>(this));
+	
+}
+
 void ADFCharacter::Stun()
 {
 	StateManager->SetState(NewObject<UStunnedState>(this));
@@ -424,7 +452,6 @@ void ADFCharacter::RecoverStart()
 	if (StateManager->CurrentState->GetStateType() == ECharacterStateType::Recover) return;
 	
 	StateManager->SetState(NewObject<URecoverState>(this));
-	
 }
 
 void ADFCharacter::FinishGetUp()
@@ -523,12 +550,14 @@ void ADFCharacter::OnGrabbed_Implementation(AActor* Grabber)
 {
 	if (!Grabber || !MovementModifier) return;
 	MovementModifier->RegisterGrabInteraction(Grabber);
+	StateManager->SetState(NewObject<UGrabbedState>(this));
 }
 
 void ADFCharacter::OnGrabReleased_Implementation(AActor* Grabber)
 {
 	if (!Grabber || !MovementModifier) return;
 	MovementModifier->UnregisterGrabInteraction(Grabber);
+	StateManager->SetState(NewObject<UGrabbedState>(this));
 }
 
 UPrimitiveComponent* ADFCharacter::GetRoot_Implementation()

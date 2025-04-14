@@ -83,6 +83,16 @@ void UMovementModifierComponent::UnregisterGrabInteraction(AActor* TargetActor)
 	}
 }
 
+bool UMovementModifierComponent::UnregisterAll()
+{
+	for (auto& Grab : ActiveGrabs)
+	{
+		IGrabbable::Execute_OnGrabReleased(Grab.Key.Get(), GetOwner());
+	}
+
+	return ActiveGrabs.IsEmpty();
+}
+
 FVector UMovementModifierComponent::CalculateTotalForce()
 {
 	FVector TotalForce = FVector::ZeroVector;
@@ -107,6 +117,12 @@ FVector UMovementModifierComponent::CalculateGrabbedResistance()
 	for (auto& Grab : ActiveGrabs)
 	{
 		AActor* Target = Grab.Key.Get();
+
+		if (!Target)
+		{
+			UnregisterGrabInteraction(Target);
+			continue;
+		}
 		FVector Resistance = IGrabbable::Execute_GetResistanceForce(Target, GetOwner());
 
 		TotalResistance += Resistance;

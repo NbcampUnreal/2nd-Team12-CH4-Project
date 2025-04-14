@@ -8,6 +8,7 @@
 #include "PhysicsEngine/PhysicalAnimationComponent.h"
 #include "DFCharacter.generated.h"
 
+class UAbilityStrategyManager;
 class UCharacterStateManager;
 class UMovementModifierComponent;
 class UGrabComponent;
@@ -35,7 +36,8 @@ protected:
 public:	
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-	
+
+	bool EventOnDestroy();
 	////// 캐릭터 액션
 	void Move(const FInputActionValue& Value);
 	
@@ -50,7 +52,9 @@ public:
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void Server_Punch();
 	
-	void Sprint(const FInputActionValue& Value); //  CharacterMovement의 스피드 올리기 (이건 자동 리플), 달리기 이펙트 생성
+	void StartSprint(const FInputActionValue& Value); //  CharacterMovement의 스피드 올리기 (이건 자동 리플), 달리기 이펙트 생성
+
+	void StopSprint(const FInputActionValue& Value); //  CharacterMovement의 스피드 올리기 (이건 자동 리플), 달리기 이펙트 생성
 	
 	void Look(const FInputActionValue& Value); // 다른 클라는 몰라도 되니까 로컬만
 
@@ -69,11 +73,6 @@ public:
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void Server_ReleaseGrab();
 	
-	void DropKick(const FInputActionValue& Value);
-
-	UFUNCTION(Server, Reliable, BlueprintCallable)
-	void Server_DropKick();
-	
 	void StartJump(const FInputActionValue& Value);
 	
 	void Headbutt(const FInputActionValue& Value);
@@ -89,6 +88,8 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category="PhysicalAnimation")
 	void ApplyPhysicalAnimationSettings();
+
+	void RegisterAbilities();
 	///////
 	
 
@@ -139,8 +140,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Input)
 	TObjectPtr<UInputAction> ReleaseGrabAction;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Input)
-	TObjectPtr<UInputAction> DropKickAction;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Input)
 	TObjectPtr<UInputAction> TossAction;
@@ -185,6 +184,11 @@ public:
 	TObjectPtr<UMovementModifierComponent> MovementModifier;
 
 	UPROPERTY(BlueprintReadOnly)
+	TObjectPtr<UAbilityStrategyManager> AbilityManager;
+	
+	UPROPERTY(BlueprintReadOnly)
 	TObjectPtr<UCharacterStateManager> StateManager;
 };
+
+
 

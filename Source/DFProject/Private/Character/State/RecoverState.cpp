@@ -7,6 +7,17 @@
 
 void URecoverState::Tick(ADFCharacter* Character, float DeltaTime)
 {
+	FVector MeshLocation = Character->GetMesh()->GetComponentLocation() - Character->MeshOffset.GetLocation();
+	FVector NewCapsuleLocation = FVector(MeshLocation.X, MeshLocation.Y, MeshLocation.Z);
+	Character->SetActorLocation(NewCapsuleLocation);
+
+	FName ReferenceBone = TEXT("Hips"); // 또는 pelvis, root 등
+	FTransform BoneTransform = Character->GetMesh()->GetSocketTransform(ReferenceBone, RTS_World);
+	FRotator TargetRotation = BoneTransform.GetRotation().Rotator() - Character->MeshOffset.Rotator();
+	TargetRotation.Pitch = 0.0f;
+	TargetRotation.Roll = 0.0f;
+	Character->SetActorRotation(TargetRotation);
+	
 	Character->PhysicalAnimComp->SetStrengthMultiplyer(RecoverAlpha);
 
 	if (USkeletalMeshComponent* SMesh = Character->GetMesh())

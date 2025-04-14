@@ -3,7 +3,7 @@
 
 #include "Character/BodyPart/BodyPart.h"
 
-#include "Ability/AbilityStrategy.h"
+#include "Ability/Strategy/AbilityStrategy.h"
 #include "Character/BodyPart/AttachInfoComponent.h"
 #include "Components/SphereComponent.h"
 #include "GameFramework/Character.h"
@@ -84,11 +84,7 @@ void ABodyPart::Attach_Implementation(ACharacter* TargetCharacter, const UAttach
 	BoneConstraint->SetConstrainedComponents(BodyCollider, NAME_None, Mesh, BoneToAttach);
 }
 
-void ABodyPart::ApplyImpulse()
-{
-	FVector ImpulseDirection = OwningCharacter->GetActorForwardVector() * ImpulsePower; // 방향도 매개변수로 받을까 고민
-	BodyCollider->AddImpulse(ImpulseDirection, NAME_None, true);
-}
+
 
 void ABodyPart::SetAttackStrategy(UAbilityStrategy* NewStrategy)
 {
@@ -172,6 +168,11 @@ void ABodyPart::SaveAttackTime()
 TObjectPtr<USphereComponent> ABodyPart::GetBodyCollider()
 {
 	return BodyCollider;
+}
+
+TObjectPtr<ACharacter> ABodyPart::GetOwningCharacter()
+{
+	return OwningCharacter;
 }
 
 AActor* ABodyPart::GetActualTarget_Implementation()
