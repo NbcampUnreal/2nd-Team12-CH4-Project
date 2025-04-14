@@ -22,6 +22,10 @@ enum class EGrabState : uint8
 };
 
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnGrabStart, const FGrabTargetInfo&, TargetInfo);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnGrabRelease, const FGrabTargetInfo&, TargetInfo);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnGrabFailed, const FGrabTargetInfo&, TargetInfo);
+
 /**
  * 필터링과 감지, 흐름을 관리
  * 
@@ -54,7 +58,16 @@ public:
 	void SetGrabState(EGrabState NewState);
 
 	EGrabState GetCurrentGrabState();
+
 	
+	UPROPERTY(BlueprintAssignable, Category = "GrabEvents")
+	FOnGrabStart OnGrabbed;
+
+	UPROPERTY(BlueprintAssignable, Category = "GrabEvents")
+	FOnGrabRelease OnGrabRelease;
+
+	UPROPERTY(BlueprintAssignable, Category = "GrabEvents")
+	FOnGrabFailed OnGrabFailed;
 protected:
 	void DetectClosestGrabbable();
 	

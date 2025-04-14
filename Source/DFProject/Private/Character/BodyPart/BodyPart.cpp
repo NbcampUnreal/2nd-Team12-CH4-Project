@@ -16,7 +16,7 @@ ABodyPart::ABodyPart()
 	PrimaryActorTick.bCanEverTick = false;
 	BodyCollider = CreateDefaultSubobject<USphereComponent>(TEXT("BodyCollider"));
 	SetRootComponent(BodyCollider);
-	BodyCollider->SetCollisionProfileName(TEXT("BodyPartAttack"));
+	BodyCollider->SetCollisionProfileName(TEXT("BodyPart"));
 	BodyCollider->OnComponentBeginOverlap.AddDynamic(this, &ABodyPart::OnAttackOverlap);
 
 	BoneConstraint = CreateDefaultSubobject<UPhysicsConstraintComponent>(TEXT("HandConstraint"));
@@ -37,9 +37,7 @@ void ABodyPart::BeginPlay()
 	Super::BeginPlay();
 	
 	BodyCollider->SetHiddenInGame(false);
-	BodyCollider->SetVisibility(true);
-	
-	
+	BodyCollider->SetVisibility(true);	
 }
 
 void ABodyPart::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -54,10 +52,6 @@ void ABodyPart::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 void ABodyPart::PerformAttack()
 {
-	//if (!BodyCollider) return;
-	//SaveAttackTime();
-	//ApplyImpulse();
-
 	if (CurrentAttackStrategy) CurrentAttackStrategy->StartAbility_Implementation(this);
 }
 
@@ -146,9 +140,6 @@ void ABodyPart::OnAttackOverlap(UPrimitiveComponent* OverlappedComp, AActor* Oth
 		FVector Velocity = BodyCollider->GetComponentVelocity();
 		float ImpactForce = Velocity.Size() * VirtualMass;
 
-		// 충격 방향으로 임펄스 적용
-		//HitComp->AddImpulse(Dir * ImpactForce, NAME_None, true);
-
 		ACharacter* HitCharacter = Cast<ACharacter>(OtherActor);
 
 		if (!HitCharacter)
@@ -182,3 +173,39 @@ TObjectPtr<USphereComponent> ABodyPart::GetBodyCollider()
 {
 	return BodyCollider;
 }
+
+AActor* ABodyPart::GetActualTarget_Implementation()
+{
+	return Owner;
+}
+
+FVector ABodyPart::GetResistanceForce_Implementation(AActor* PullingActor)
+{
+	if (Owner && Owner->Implements<UGrabbable>())
+	{
+		return IGrabbable::Execute_GetResistanceForce(Owner, PullingActor);
+	}
+	return FVector::ZeroVector;
+}
+
+void ABodyPart::OnGrabbed_Implementation(AActor* Grabber)
+{
+	if (Owner && Owner->Implements<UGrabbable>())
+	{
+		return IGrabbable::Execute_OnGrabbed(Owner, Grabber);
+	}
+}
+
+void ABodyPart::OnGrabReleased_Implementation(AActor* Grabber)
+{
+	if (Owner && Owner->Implements<UGrabbable>())
+	{
+		return IGrabbable::Execute_OnGrabReleased(Owner, Grabber);
+	}
+}
+
+UPrimitiveComponent* ABodyPart::GetRoot_Implementation()
+{
+	return BodyCollider;
+}
+

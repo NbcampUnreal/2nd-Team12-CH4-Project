@@ -3,6 +3,7 @@
 
 #include "Ability/Grab/BodyPartGrabHandler.h"
 
+#include "Character/DFCharacter.h"
 #include "Character/BodyPart/BodyPart.h"
 #include "PhysicsEngine/PhysicsConstraintComponent.h"
 #include "PhysicsEngine/PhysicsHandleComponent.h"
@@ -41,7 +42,11 @@ void UBodyPartGrabHandler::Initialize(ABodyPart* BodyPart)
 	GrabCollider = BodyPart->GetBodyCollider();
 	GrabCollider->OnComponentBeginOverlap.AddDynamic(this, &UBodyPartGrabHandler::OnGrabColliderBeginOverlap);
 
-	if (GrabConstraint && Root.IsValid()) GrabConstraint->AttachToComponent(Root.Get(), FAttachmentTransformRules::KeepRelativeTransform);
+	if (GrabConstraint && Root.IsValid())
+	{
+		GrabConstraint->AttachToComponent(Root.Get(), FAttachmentTransformRules::KeepRelativeTransform);
+	}
+	
 }
 
 void UBodyPartGrabHandler::MoveToTarget(const FVector& TargetLocation)
@@ -61,22 +66,32 @@ void UBodyPartGrabHandler::MoveToTarget(const FVector& TargetLocation)
 void UBodyPartGrabHandler::ExecuteGrab(const FGrabTargetInfo& TargetInfo)
 {
 	if (!TargetInfo.TargetActor || !GrabConstraint || !GrabCollider.IsValid()) return;
+	if (Cast<ADFCharacter>(TargetInfo.TargetActor)) return; // 하드코딩함 바꿔야함.
 
 	Super::ExecuteGrab(TargetInfo);
 
 	GrabCollider->IgnoreActorWhenMoving(TargetInfo.TargetActor, true);
+
 	
-	UPrimitiveComponent* TargetRoot = Cast<UPrimitiveComponent>(TargetInfo.TargetActor->GetRootComponent());
-	
+	UPrimitiveComponent* TargetRoot = IGrabbable::Execute_GetRoot(TargetInfo.TargetActor);
+
 	GrabConstraint->SetConstrainedComponents(
 		Cast<UPrimitiveComponent>(GrabCollider),
 		NAME_None,
 		Cast<UPrimitiveComponent>(TargetInfo.TargetActor->GetRootComponent()),
 		NAME_None
 	);
+
+	if (!GrabConstraint->ConstraintInstance.IsValidConstraintInstance())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[GrabHandler] ConstraintInstance is INVALID after setting!"));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Log, TEXT("[GrabHandler] Constraint successfully initialized."));
+	}
 	
 	CurrentGrabTarget = TargetInfo.TargetActor;
-
 }
 
 void UBodyPartGrabHandler::ReleaseGrab()

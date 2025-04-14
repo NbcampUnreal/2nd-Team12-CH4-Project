@@ -24,12 +24,10 @@ bool UGrabHandler::IsGrabbable(const AActor* Target)
 void UGrabHandler::ExecuteGrab(const FGrabTargetInfo& TargetInfo)
 {
 	OwningGrabComponent->Grabbed(TargetInfo);
-	OnGrabStart.Broadcast(TargetInfo);
 }
 
 void UGrabHandler::ReleaseGrab()
 {
-	OnGrabRelease.Broadcast();
 }
 
 void UGrabHandler::OnGrabColliderBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
@@ -45,7 +43,6 @@ void UGrabHandler::OnGrabColliderBeginOverlap(UPrimitiveComponent* OverlappedCom
 		return;
 	
 	FGrabTargetInfo TargetInfo;
-	
 	
 	TargetInfo.TargetActor = OtherActor;
 	TargetInfo.TargetComponent = OtherComp;

@@ -5,6 +5,7 @@
 
 #include "Ability/Grab/Grabbable.h"
 #include "Ability/Grab/GrabHandler.h"
+#include "Character/MovementModifierComponent.h"
 #include "PhysicsEngine/PhysicsConstraintComponent.h"
 
 // Sets default values for this component's properties
@@ -62,7 +63,7 @@ void UGrabComponent::DetectClosestGrabbable()
 	FCollisionQueryParams Params;
 	Params.AddIgnoredActor(GetOwner());
 
-	GetWorld()->SweepMultiByChannel( // Start부터 끝까지 Sweep으로 충돌 검사
+	GetWorld()->SweepMultiByChannel( // Start부터 끝까지 Sweep으로 충돌 검사 캐릭터 바디 파츠 말고 스켈레탈 메시 감지로 변경할까
 		Hits,
 		Start,
 		End,
@@ -145,7 +146,6 @@ void UGrabComponent::SetGrabState(EGrabState NewState)
 
 	CurrentState = NewState;
 
-	// Enter 처리
 	switch (NewState)
 	{
 	case EGrabState::Idle:
@@ -186,11 +186,20 @@ void UGrabComponent::Grabbed(const FGrabTargetInfo& Info)
 {
 	SetGrabState(EGrabState::Grabbing);
 	GrabbedTargetInfo = Info;
+	OnGrabbed.Broadcast(GrabbedTargetInfo);
+	
+	IGrabbable::Execute_OnGrabbed(GetOwner(), Info.TargetActor);
+	IGrabbable::Execute_OnGrabbed(Info.TargetActor, GetOwner());
 }
 
 void UGrabComponent::Released()
 {
 	SetGrabState(EGrabState::Idle);
+	IGrabbable::Execute_OnGrabReleased(GetOwner(), GrabbedTargetInfo.TargetActor);
+	IGrabbable::Execute_OnGrabReleased(GrabbedTargetInfo.TargetActor, GetOwner());
+	
+	OnGrabRelease.Broadcast(GrabbedTargetInfo);
+	
 	GrabbedTargetInfo = {};
 	if (GrabHandler)
 	{
