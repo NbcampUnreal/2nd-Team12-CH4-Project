@@ -48,14 +48,15 @@ void UBTService_AvoidDanger::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* 
 
 	const FVector MyLocation = AIPawn->GetActorLocation();
 
-	//  Danger 해제 판단
+	// ✅ Danger 해제 거리 조정: 500
+	const float DangerEscapeThreshold = 500.f;
 	if (BlackboardComp->GetValueAsBool(IsNearDangerKey))
 	{
 		const FVector AvoidLoc = BlackboardComp->GetValueAsVector(AvoidLocationKey);
 		if (!AvoidLoc.IsNearlyZero())
 		{
 			const float Distance = FVector::Dist2D(MyLocation, AvoidLoc);
-			if (Distance > 400.f)
+			if (Distance > DangerEscapeThreshold)
 			{
 				LOG_WARNING(TEXT("✅ 충분히 회피 성공 → Danger 해제"));
 				BlackboardComp->ClearValue(AvoidLocationKey);
@@ -65,7 +66,7 @@ void UBTService_AvoidDanger::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* 
 		}
 	}
 
-	//  위험 감지
+	// ✅ Danger 감지
 	FVector DangerDirection = FVector::ZeroVector;
 	bool bDangerDetected = false;
 
@@ -83,11 +84,10 @@ void UBTService_AvoidDanger::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* 
 		bDangerDetected = true;
 	}
 
-	//  회피 위치 계산
 	if (bDangerDetected && !DangerDirection.IsNearlyZero())
 	{
 		const FVector AvoidDir = DangerDirection.GetSafeNormal2D();
-		const FVector RawAvoidLoc = MyLocation + AvoidDir * AvoidDistance * 2.f;
+		const FVector RawAvoidLoc = MyLocation + AvoidDir * AvoidDistance * 2.f; // ✅ 더 가까이 회피
 
 		if (bDebugLog)
 		{
@@ -107,7 +107,6 @@ void UBTService_AvoidDanger::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* 
 		}
 		else
 		{
-			// fallback → 같은 방향 뒤쪽으로 넉넉히 던짐
 			const FVector SearchOrigin = MyLocation + AvoidDir * 300.f;
 			FNavLocation RandomSafeLoc;
 
@@ -130,7 +129,7 @@ void UBTService_AvoidDanger::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* 
 		BlackboardComp->ClearValue(AvoidLocationKey);
 	}
 
-	//  최종 Danger 상태 반영
+	// ✅ 최종 Danger 상태 반영
 	BlackboardComp->SetValueAsBool(IsNearDangerKey, bDangerDetected);
 }
 
@@ -175,19 +174,31 @@ bool UBTService_AvoidDanger::IsNearDeadZones(const FVector& Location, FVector& O
 	TArray<AActor*> Found;
 	UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName("DFDeadZoneComponent"), Found);
 
+	LOG_WARNING(TEXT("🟡 DeadZone 찾은 개수: %d"), Found.Num());
+
 	bool bDetected = false;
+	float ClosestDist = FLT_MAX;
+	FVector ClosestDir = FVector::ZeroVector;
 
 	for (AActor* Zone : Found)
 	{
 		if (!Zone) continue;
 
-		const FVector ToDanger = Zone->GetActorLocation() - Location;
-		if (ToDanger.Size() <= DetectRadius)
+		const float Dist = FVector::Dist2D(Zone->GetActorLocation(), Location);
+		if (Dist <= DetectRadius && Dist < ClosestDist)
 		{
-			OutDirection += ToDanger;
+			ClosestDist = Dist;
+			ClosestDir = Zone->GetActorLocation() - Location;
 			bDetected = true;
+
+			if (bDebugLog)
+			{
+				DrawDebugSphere(GetWorld(), Zone->GetActorLocation(), 50.f, 12, FColor::Purple, false, 2.0f);
+				LOG_WARNING(TEXT("🟣 DeadZone 감지 위치: %s | 거리: %f"), *Zone->GetActorLocation().ToString(), Dist);
+			}
 		}
 	}
 
+	OutDirection = ClosestDir;
 	return bDetected;
 }
