@@ -103,15 +103,14 @@ void ADFBattleGameMode::EndGame()
     }
 
     // 최종 생존자가 한 명이라면 그 Controller의 이름을, 
-    // 그렇지 않으면 "No Winner"로 설정합니다.
+    // 그렇지 않으면 "No Winner"로 설정
     ADFBattleGameState* MyGS = GetGameState<ADFBattleGameState>();
     if (MyGS)
     {
         if (AliveControllers.Num() == 1)
         {
             FString WinnerName;
-            // AI Controller는 APlayerController가 아닐 수 있으므로, 기본적으로 Pawn의 이름을 사용하거나,
-            // PlayerState가 있다면 그 이름을 사용하는 방법을 고려합니다.
+            // AI Controller는 APlayerController가 아닐 수 있으므로, 기본적으로 Pawn의 이름을 사용
             if (AliveControllers[0]->PlayerState)
             {
                 WinnerName = AliveControllers[0]->PlayerState->GetPlayerName();
