@@ -5,8 +5,6 @@
 #include "DFItemAbilityComponent.h"
 #include "DFBattleItem.generated.h"
 
-class ADFItemBaseActor;
-
 UCLASS()
 class DFPROJECT_API UDFBattleItem : public UDFBaseItem
 {
@@ -15,9 +13,6 @@ class DFPROJECT_API UDFBattleItem : public UDFBaseItem
 
 public:
 	UDFBattleItem();
-
-	UPROPERTY(EditAnywhere)
-	TSubclassOf<ADFItemBaseActor> ItemActorClass;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
 	TArray<TSubclassOf<UDFItemAbilityComponent>> Abilities;	

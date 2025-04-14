@@ -38,8 +38,8 @@ public:
 	UFUNCTION()
 	void OnGripAreaBeginOverlap(
 		UPrimitiveComponent* OverlappedComponent,
-		AActor* OterActor,
-		UPrimitiveComponent* OtherCompm,
+		AActor* OtherActor,
+		UPrimitiveComponent* OtherComp,
 		int32 OtherBodyIndex,
 		bool bFromSweep,
 		const FHitResult& SweepResult);
@@ -58,7 +58,7 @@ public:
 	void AbilitiesMainAction();
 
 	UFUNCTION(BlueprintCallable, Category = "Item")
-	FName GetCurrentnItemId() const;
+	FName GetCurrentItemId() const;
 
 protected:
 	virtual void BeginPlay() override;
