@@ -32,5 +32,4 @@ void ADFCrownSpawner::SpawnCrown()
 
 	ADFCrownActor* Crown = GetWorld()->SpawnActor<ADFCrownActor>(CrownActor, SpawnLocation, FRotator::ZeroRotator);
 
-	Crown->ItemMesh->SetSimulatePhysics(true);
 }
