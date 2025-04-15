@@ -260,26 +260,30 @@ void ADFTimeOutGameMode::RespawnPlayer(AController* Controller, APawn* PawnToRes
     FTimerHandle RespawnTimerHandle;
     UE_LOG(LogTemp, Log, TEXT("RespawnPlayer: RespawnDelay = %f, 타이머 설정 완료"), RespawnDelay);
 
-    // 타이머 딜레이 후에 Pawn을 재활성화하고 컨트롤러가 다시 Possess 하도록 설정
+    // 타이머 딜레이 후에 Pawn 재활성화 및 Possess 실행 (수정된 lambda 사용)
     FTimerDelegate RespawnDelegate = FTimerDelegate::CreateLambda([Controller, PawnToRespawn]()
         {
             UE_LOG(LogTemp, Log, TEXT("RespawnDelegate 람다 실행됨"));
 
-            // Pawn을 다시 보이게 하고 충돌 활성화
             PawnToRespawn->SetActorHiddenInGame(false);
             PawnToRespawn->SetActorEnableCollision(true);
 
-            // 컨트롤러가 Pawn을 다시 소유
             Controller->Possess(PawnToRespawn);
 
-            // PlayerController라면 전용 초기화 로직을 수행.
+            APawn* PossessedPawn = Controller->GetPawn();
+            if (PossessedPawn == PawnToRespawn)
+            {
+                UE_LOG(LogTemp, Log, TEXT("Controller %s가 Pawn %s를 성공적으로 소유함."), *Controller->GetName(), *PawnToRespawn->GetName());
+            }
+            else
+            {
+                UE_LOG(LogTemp, Error, TEXT("Controller %s가 기대한 Pawn을 소유하지 않음!"), *Controller->GetName());
+            }
+
             if (APlayerController* PC = Cast<APlayerController>(Controller))
             {
-                // 카메라 전환 (블렌드 시간 0.0f로 즉시 전환)
                 PC->SetViewTargetWithBlend(PawnToRespawn, 0.0f);
-                // 입력 활성화 - DFPlayerController에서 입력 바인딩이 제대로 설정되어 있어야 함
-                PawnToRespawn->EnableInput(PC);
-
+                // Possess() 후 입력은 자동 활성화되므로 EnableInput() 호출은 생략
                 if (ADFCharacter* DFCharacter = Cast<ADFCharacter>(PawnToRespawn))
                 {
                     DFCharacter->RecoverStart();
@@ -288,12 +292,10 @@ void ADFTimeOutGameMode::RespawnPlayer(AController* Controller, APawn* PawnToRes
             else
             {
                 UE_LOG(LogTemp, Log, TEXT("AI Pawn %s 부활"), *PawnToRespawn->GetName());
-                // AI 컨트롤러의 경우 추가 초기화가 필요하면 수행
             }
 
             UE_LOG(LogTemp, Log, TEXT("RespawnPlayer: Pawn %s가 다시 소유됨."), *PawnToRespawn->GetName());
         });
 
-    // 타이머를 RespawnDelay 후에 실행
     GetWorld()->GetTimerManager().SetTimer(RespawnTimerHandle, RespawnDelegate, RespawnDelay, false);
 }
