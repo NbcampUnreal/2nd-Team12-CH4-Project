@@ -73,6 +73,7 @@ void URecoverState::Tick(ADFCharacter* Character, float DeltaTime)
 
 		if (Angle < AngleThreshold || RecoverAlpha > 0.95f)
 		{
+			bRecoverFinished = true;
 			Character->FinishGetUp();
 		}
 	}
@@ -80,6 +81,7 @@ void URecoverState::Tick(ADFCharacter* Character, float DeltaTime)
 
 void URecoverState::Enter(ADFCharacter* Character)
 {
+	bRecoverFinished = false;
 	RecoverAlpha = 0.f;
 	RecoverSpeed = 0.8f;
 	Character->PhysicalAnimComp->SetStrengthMultiplyer(0.0f);
@@ -88,4 +90,14 @@ void URecoverState::Enter(ADFCharacter* Character)
 
 void URecoverState::Exit(ADFCharacter* Character)
 {
+}
+
+
+bool URecoverState::CanChangeToState(ECharacterStateType NewState)
+{
+	if (NewState == ECharacterStateType::Dead) return true;
+
+	if (NewState == ECharacterStateType::Idle) return true;
+	
+	return false;
 }

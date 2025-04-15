@@ -63,7 +63,7 @@ void UGrabComponent::DetectClosestGrabbable()
 	FCollisionQueryParams Params;
 	Params.AddIgnoredActor(GetOwner());
 
-	GetWorld()->SweepMultiByChannel( // Start부터 끝까지 Sweep으로 충돌 검사 캐릭터 바디 파츠 말고 스켈레탈 메시 감지로 변경할까
+	GetWorld()->SweepMultiByChannel( // Start부터 끝까지 Sweep으로 충돌 검사
 		Hits,
 		Start,
 		End,
@@ -189,14 +189,17 @@ void UGrabComponent::Grabbed(const FGrabTargetInfo& Info)
 	OnGrabbed.Broadcast(GrabbedTargetInfo);
 	
 	IGrabbable::Execute_OnGrabbed(GetOwner(), Info.TargetActor);
-	IGrabbable::Execute_OnGrabbed(Info.TargetActor, GetOwner());
+	IGrabbable::Execute_OnGrabbedBy(Info.TargetActor, GetOwner());
 }
 
 void UGrabComponent::Released()
 {
 	SetGrabState(EGrabState::Idle);
-	IGrabbable::Execute_OnGrabReleased(GetOwner(), GrabbedTargetInfo.TargetActor);
-	IGrabbable::Execute_OnGrabReleased(GrabbedTargetInfo.TargetActor, GetOwner());
+	if (GrabbedTargetInfo.TargetActor)
+	{
+		IGrabbable::Execute_OnGrabReleased(GetOwner(), GrabbedTargetInfo.TargetActor);
+		IGrabbable::Execute_OnGrabReleasedBy(GrabbedTargetInfo.TargetActor, GetOwner());
+	}
 	
 	OnGrabRelease.Broadcast(GrabbedTargetInfo);
 	

@@ -17,7 +17,6 @@ ABodyPart::ABodyPart()
 	BodyCollider = CreateDefaultSubobject<USphereComponent>(TEXT("BodyCollider"));
 	SetRootComponent(BodyCollider);
 	BodyCollider->SetCollisionProfileName(TEXT("BodyPart"));
-	BodyCollider->OnComponentBeginOverlap.AddDynamic(this, &ABodyPart::OnAttackOverlap);
 
 	BoneConstraint = CreateDefaultSubobject<UPhysicsConstraintComponent>(TEXT("HandConstraint"));
 
@@ -50,11 +49,6 @@ void ABodyPart::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	OwningCharacter = nullptr;
 }
 
-void ABodyPart::PerformAttack()
-{
-	if (CurrentAttackStrategy) CurrentAttackStrategy->StartAbility_Implementation(this);
-}
-
 void ABodyPart::Attach_Implementation(ACharacter* TargetCharacter, const UAttachInfoComponent* AttachInfo)
 {
 	if (!TargetCharacter) return;
@@ -84,13 +78,6 @@ void ABodyPart::Attach_Implementation(ACharacter* TargetCharacter, const UAttach
 	BoneConstraint->SetConstrainedComponents(BodyCollider, NAME_None, Mesh, BoneToAttach);
 }
 
-
-
-void ABodyPart::SetAttackStrategy(UAbilityStrategy* NewStrategy)
-{
-	CurrentAttackStrategy = NewStrategy;
-}
-
 FTransform ABodyPart::GetOffsetTransform(const ACharacter* TargetCharacter, const UAttachInfoComponent* AttachInfo)
 {
 	if (!TargetCharacter || !AttachInfo) return FTransform::Identity;
@@ -107,62 +94,6 @@ FTransform ABodyPart::GetOffsetTransform(const ACharacter* TargetCharacter, cons
 
 	// AttachInfo가 Bone 기준으로 얼마나 떨어져 있는가 = Offset
 	return AttachInfoTransform.GetRelativeTransform(BoneWorldTransform);
-}
-
-void ABodyPart::OnAttackOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp,
-	int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
-{
-	float CurrentTime = GetWorld()->GetTimeSeconds();
-	
-	if (CurrentTime - LastAttackTime > AttackValidDuration) return;
-	
-	if (!OtherActor || OtherActor == OwningCharacter) return;
-
-	if (const ABodyPart* OtherBodyPart = Cast<ABodyPart>(OtherActor))
-	{
-		// 같은 캐릭터의 바디 파츠인지 확인
-		if (OtherBodyPart->OwningCharacter == OwningCharacter)
-		{
-			return; // 자기 몸의 바디파츠면 무시
-		}
-	}
-	
-	if (UPrimitiveComponent* HitComp = Cast<UPrimitiveComponent>(OtherComp))
-	{
-		// 충돌 방향
-		FVector Dir = (OtherActor->GetActorLocation() - GetActorLocation()).GetSafeNormal();
-
-		// 공격자의 속도 기반으로 충격량 추정 (속도 * 질량)
-		FVector Velocity = BodyCollider->GetComponentVelocity();
-		float ImpactForce = Velocity.Size() * VirtualMass;
-
-		ACharacter* HitCharacter = Cast<ACharacter>(OtherActor);
-
-		if (!HitCharacter)
-		{
-			// 바디 파츠일 경우, OwningCharacter를 대신 참조
-			if (const ABodyPart* OtherBodyPart = Cast<ABodyPart>(OtherActor))
-			{
-				HitCharacter = OtherBodyPart->OwningCharacter;
-			}
-		}
-
-		if (HitCharacter && HitCharacter != OwningCharacter)
-		{
-			UGameplayStatics::ApplyDamage(
-				HitCharacter,
-				ImpactForce * 0.0002f,
-				OwningCharacter->GetController(),
-				this,
-				UDamageType::StaticClass()
-			);
-		}
-	}
-}
-
-void ABodyPart::SaveAttackTime()
-{
-	LastAttackTime = GetWorld()->GetTimeSeconds();
 }
 
 TObjectPtr<USphereComponent> ABodyPart::GetBodyCollider()
@@ -197,11 +128,27 @@ void ABodyPart::OnGrabbed_Implementation(AActor* Grabber)
 	}
 }
 
+void ABodyPart::OnGrabbedBy_Implementation(AActor* Grabber)
+{
+	if (Owner && Owner->Implements<UGrabbable>())
+	{
+		return IGrabbable::Execute_OnGrabbedBy(Owner, Grabber);
+	}
+}
+
 void ABodyPart::OnGrabReleased_Implementation(AActor* Grabber)
 {
 	if (Owner && Owner->Implements<UGrabbable>())
 	{
 		return IGrabbable::Execute_OnGrabReleased(Owner, Grabber);
+	}
+}
+
+void ABodyPart::OnGrabReleasedBy_Implementation(AActor* Grabber)
+{
+	if (Owner && Owner->Implements<UGrabbable>())
+	{
+		return IGrabbable::Execute_OnGrabReleasedBy(Owner, Grabber);
 	}
 }
 

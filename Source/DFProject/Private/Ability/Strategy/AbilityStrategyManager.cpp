@@ -40,3 +40,17 @@ void UAbilityStrategyManager::ClearAllAbilities()
 {
 	RegisteredAbilities.Empty();
 }
+
+void UAbilityStrategyManager::InitializeAbilities()
+{
+	for (auto& Pair : InitialAbilities)
+	{
+		if (Pair.Value)
+		{
+			if (UAbilityStrategy* NewAbility = NewObject<UAbilityStrategy>(this, Pair.Value))
+			{
+				RegisteredAbilities.Add(Pair.Key, NewAbility);
+			}
+		}
+	}
+}

@@ -22,6 +22,9 @@ struct FInputActionValue;
 
 enum class EBodyPartType : uint8;
 
+DECLARE_LOG_CATEGORY_EXTERN(LogDamaged, Log, All);
+DECLARE_LOG_CATEGORY_EXTERN(LogInitialize, Log, All);
+
 UCLASS()
 class DFPROJECT_API ADFCharacter : public ACharacter, public IGrabbable
 {
@@ -33,7 +36,8 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;  
-public:	
+public:
+	void UpdateSpringArmOrientation();
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
@@ -90,6 +94,9 @@ public:
 	void ApplyPhysicalAnimationSettings();
 
 	void RegisterAbilities();
+
+	UFUNCTION(BlueprintCallable, Category="Respawn")
+	void Initialize();
 	///////
 	
 
@@ -111,9 +118,17 @@ public:
 	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
 	virtual AActor* GetActualTarget_Implementation() override;
+
 	virtual FVector GetResistanceForce_Implementation(AActor* PullingActor) override;
-	virtual void OnGrabbed_Implementation(AActor* Grabber) override;
-	virtual void OnGrabReleased_Implementation(AActor* Grabber) override;
+
+	virtual void OnGrabbed_Implementation(AActor* TargetActor) override;
+
+	virtual void OnGrabbedBy_Implementation(AActor* Grabber) override;
+
+	virtual void OnGrabReleased_Implementation(AActor* TargetActor) override;
+
+	virtual void OnGrabReleasedBy_Implementation(AActor* Grabber) override;
+
 	virtual UPrimitiveComponent* GetRoot_Implementation() override;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category=Camera)
@@ -180,15 +195,17 @@ public:
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<UGrabComponent> LeftGrabComp;
 	
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<UMovementModifierComponent> MovementModifier;
 
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<UAbilityStrategyManager> AbilityManager;
 	
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<UCharacterStateManager> StateManager;
 };
+
+
 
 
 

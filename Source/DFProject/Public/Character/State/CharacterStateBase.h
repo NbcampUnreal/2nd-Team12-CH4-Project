@@ -27,5 +27,5 @@ public:
 	virtual void Exit(ADFCharacter* Character) {}
 	virtual void Tick(ADFCharacter* Character, float DeltaTime) {}
 	virtual ECharacterStateType GetStateType() const {return ECharacterStateType::Idle;}
-	
+	virtual bool CanChangeToState(ECharacterStateType NewState) {return true;}	
 };

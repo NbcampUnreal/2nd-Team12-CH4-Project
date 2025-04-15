@@ -23,20 +23,28 @@ public:
 		bool bFromSweep,
 		const FHitResult& SweepResult);
 
-	virtual bool CanActivateAbility_Implementation(AActor* TargetActor) const override;
+	virtual bool CanActivateAbility_Implementation(AActor* TargetActor) override;
 	
 	virtual void StartAbility_Implementation(AActor* TargetActor) override;
 	
 	virtual void EndAbility_Implementation(AActor* TargetActor) override;
 
 protected:
+	virtual float ComputeDamage(float ImpactForce);
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Ability")
+	UCurveFloat* DamageCurve;
+	
 	FTimerHandle AbilityEndTimerHandle;
+
+	UPROPERTY(EditAnywhere, Category = Ability)
+	float BaseDamage = 0;
 	
 	UPROPERTY(EditAnywhere, Category = "Ability")
 	float AttackValidDuration = 0.3f;
 
 	UPROPERTY(EditAnywhere, Category = "Ability")
-	float VirtualMass = 30.f;
+	float VirtualMass = 5.f;
 
 	UPROPERTY(EditAnywhere, Category = "Ability")
 	float ImpulsePower = 10000.0f;
@@ -46,4 +54,8 @@ protected:
 
 	UPROPERTY()
 	TWeakObjectPtr<ACharacter> BodyPartOwner;
+
+	UPROPERTY()
+	TSet<TWeakObjectPtr<AActor>> DamagedActor;
 };
+

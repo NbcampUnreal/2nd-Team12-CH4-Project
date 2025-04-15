@@ -15,9 +15,11 @@ class DFPROJECT_API UStunnedState : public UCharacterStateBase
 	GENERATED_BODY()
 public:
 	virtual void Enter(ADFCharacter* Character) override;
+	
 	virtual void Tick(ADFCharacter* Character, float DeltaTime) override;
-	virtual void Exit(ADFCharacter* Character) override;
+	
+	virtual bool CanChangeToState(ECharacterStateType NewState) override;
+	
 	virtual ECharacterStateType GetStateType() const override {return ECharacterStateType::Stunned;}
-
-private:
 };
+

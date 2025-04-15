@@ -25,7 +25,7 @@ public:
 	void EndAbility(AActor* TargetActor);
 	
 	UFUNCTION(BlueprintNativeEvent)
-	bool CanActivateAbility(AActor* TargetActor) const;
+	bool CanActivateAbility(AActor* TargetActor);
 
 	UPROPERTY(EditAnywhere, Category="Ability")
 	TArray<ECharacterStateType> AllowedStates;

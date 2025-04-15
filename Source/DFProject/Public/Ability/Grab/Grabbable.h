@@ -33,13 +33,18 @@ public:
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Grabbable")
 	AActor* GetActualTarget();
-
 	
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Grabbable")
-	void OnGrabbed(AActor* Grabber);
+	void OnGrabbed(AActor* TargetActor);
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Grabbable")
-	void OnGrabReleased(AActor* Grabber);
+	void OnGrabbedBy(AActor* Grabber);
+	
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Grabbable")
+	void OnGrabReleased(AActor* TargetActor);
+	
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Grabbable")
+	void OnGrabReleasedBy(AActor* Grabber);
 	
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category="Grabbable")
 	FVector GetResistanceForce(AActor* PullingActor);

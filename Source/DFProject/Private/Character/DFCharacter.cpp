@@ -4,8 +4,6 @@
 #include "Character/DFCharacter.h"
 
 #include "EnhancedInputComponent.h"
-#include "Ability/Strategy/HeadbuttAbilityStrategy.h"
-#include "Ability/Strategy/PunchAbilityStrategy.h"
 #include "Ability/Grab/BodyPartGrabHandler.h"
 #include "Ability/Grab/GrabComponent.h"
 #include "Ability/Strategy/AbilityStrategyManager.h"
@@ -22,10 +20,11 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "PhysicsEngine/PhysicalAnimationComponent.h"
 
-// Sets default values
+DEFINE_LOG_CATEGORY(LogDamaged);
+DEFINE_LOG_CATEGORY(LogInitialize);
+
 ADFCharacter::ADFCharacter()
 {
- 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 	bUseControllerRotationYaw = false;
 	
@@ -55,6 +54,8 @@ ADFCharacter::ADFCharacter()
 	AbilityManager = CreateDefaultSubobject<UAbilityStrategyManager>(TEXT("AbilityManager"));
 	
 	StateManager = CreateDefaultSubobject<UCharacterStateManager>(TEXT("StateManager"));
+
+	SetAllBonesMass(5.0f);
 }
 
 void ADFCharacter::BeginPlay()
@@ -71,6 +72,29 @@ void ADFCharacter::BeginPlay()
 void ADFCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	//UpdateSpringArmOrientation();
+}
+
+void ADFCharacter::UpdateSpringArmOrientation()
+{
+	if (!SpringArm) return;
+
+	FVector GravityDir = GetGravityDirection();
+	FVector ArmForward = SpringArm->GetForwardVector();
+	FVector DesiredRight = FVector::CrossProduct(GravityDir, ArmForward).GetSafeNormal();
+	FVector DesiredUp = FVector::CrossProduct(ArmForward, DesiredRight).GetSafeNormal();
+
+	FMatrix RotMatrix;
+	RotMatrix.SetAxis(0, ArmForward); // X
+	RotMatrix.SetAxis(1, DesiredRight); // Y
+	RotMatrix.SetAxis(2, DesiredUp); // Z
+
+	FRotator NewRot = RotMatrix.Rotator();
+
+	// 기존 Yaw 보존
+	FRotator LocalRot = SpringArm->GetRelativeRotation();
+	NewRot.Yaw = LocalRot.Yaw;
+	SpringArm->SetRelativeRotation(NewRot);
 }
 
 void ADFCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -142,7 +166,6 @@ void ADFCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 	this,
 	&ADFCharacter::StopGrab
 	);
-
 	
 	EnhancedInputComponent->BindAction(
 	PunchAction,
@@ -230,7 +253,7 @@ void ADFCharacter::StartSprint(const FInputActionValue& Value)
 {
 	if (StateManager->CurrentState->GetStateType() == ECharacterStateType::Stunned) return;
 
-	GetCharacterMovement()->MaxWalkSpeed = 1000.f;
+	GetCharacterMovement()->MaxWalkSpeed = 800.f;
 }
 
 void ADFCharacter::StopSprint(const FInputActionValue& Value)
@@ -243,9 +266,19 @@ void ADFCharacter::Look(const FInputActionValue& Value)
 	const FVector2D LookValue = Value.Get<FVector2D>();
 
 	if (!SpringArm) return;
+	//FVector GravityDir = GetGravityDirection();
+	//FVector CharacterRight = GetActorRightVector();
+	//FVector RotationAxis = FVector::CrossProduct(GravityDir, CharacterRight).GetSafeNormal();
+	//FQuat DeltaRotationQuat = FQuat(RotationAxis, FMath::DegreesToRadians(LookValue.X));
+	//SpringArm->AddLocalRotation(DeltaRotationQuat);
+
+	//FVector GravityDir = GetGravityDirection(); // 예: (0, 0, -1)
+	//float YawInput = LookValue.X;
+
+	//FQuat DeltaRotationQuat = FQuat(GravityDir.GetSafeNormal(), FMath::DegreesToRadians(YawInput));
+	//SpringArm->AddWorldRotation(DeltaRotationQuat);
 
 	FRotator CurrentRotation = SpringArm->GetRelativeRotation();
-
 	if (LookValue.X != 0.0f)
 	{
 		CurrentRotation.Yaw += LookValue.X;
@@ -265,18 +298,14 @@ void ADFCharacter::Server_StartGrab_Implementation()
 	if (StateManager->CurrentState->GetStateType() != ECharacterStateType::Idle) return;
 
 	if (!BodyParts.Contains(EBodyPartType::LeftFist) || !BodyParts.Contains(EBodyPartType::RightFist)) return;
-
-	UE_LOG(LogTemp, Log, TEXT("Started grabbing."));
-
+	
 	if (LeftGrabComp && LeftGrabComp->GetCurrentGrabState() != EGrabState::Grabbing)
 	{
-		UE_LOG(LogTemp, Log, TEXT("Starting left grab."));
 		LeftGrabComp->StartGrab();
 	}
 
 	if (RightGrabComp && RightGrabComp->GetCurrentGrabState() != EGrabState::Grabbing)
 	{
-		UE_LOG(LogTemp, Log, TEXT("Starting right grab."));
 		RightGrabComp->StartGrab();
 	}
 }
@@ -309,8 +338,6 @@ void ADFCharacter::Server_ReleaseGrab_Implementation()
 
 	if (StateManager->CurrentState->GetStateType() == ECharacterStateType::Grabbed)
 		StateManager->SetState(NewObject<UIdleState>(this));
-	else if (StateManager->CurrentState->GetStateType() == ECharacterStateType::Stunned)
-		return;
 }
 
 void ADFCharacter::Server_StopGrab_Implementation()
@@ -335,10 +362,7 @@ void ADFCharacter::Server_Headbutt_Implementation()
 	
 	if (!BodyParts.Contains(EBodyPartType::Head) || !BodyParts[EBodyPartType::Head]) return;
 
-	UAbilityStrategy* PunchStrategy = NewObject<UHeadbuttAbilityStrategy>(this); // this = Outer
-
-	BodyParts[EBodyPartType::Head]->SetAttackStrategy(PunchStrategy);
-	BodyParts[EBodyPartType::Head]->PerformAttack();
+	AbilityManager->StartAbility(TEXT("Headbutt"), BodyParts[EBodyPartType::Head]);
 }
 
 
@@ -383,7 +407,7 @@ void ADFCharacter::SpawnBodyParts()
 		}
 		else
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Grab Components not initialized."));
+			UE_LOG(LogInitialize, Warning, TEXT("Grab Components not initialized."));
 		}
 
 		// 오른손 핸들러 생성 및 연결
@@ -396,7 +420,7 @@ void ADFCharacter::SpawnBodyParts()
 		}
 		else
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Grab Components not initialized."));
+			UE_LOG(LogInitialize, Warning, TEXT("Grab Components not initialized."));
 		}
 	}
 	
@@ -434,11 +458,20 @@ void ADFCharacter::ApplyPhysicalAnimationSettings()
 
 void ADFCharacter::RegisterAbilities()
 {
-	AbilityManager = NewObject<UAbilityStrategyManager>(this);
-	AbilityManager->RegisterAbility(TEXT("LeftPunch"), NewObject<UPunchAbilityStrategy>(this));
-	AbilityManager->RegisterAbility(TEXT("RightPunch"), NewObject<UPunchAbilityStrategy>(this));
-	AbilityManager->RegisterAbility(TEXT("Headbutt"), NewObject<UHeadbuttAbilityStrategy>(this));
+	AbilityManager->ClearAllAbilities();
+	AbilityManager->InitializeAbilities();
+}
+
+void ADFCharacter::Initialize()
+{
+	RegisterAbilities();
 	
+	HP = MaxHP;
+
+	LeftGrabComp->Released();
+	RightGrabComp->Released();
+	
+	StateManager->SetState(NewObject<UIdleState>(this));
 }
 
 void ADFCharacter::Stun()
@@ -458,6 +491,7 @@ void ADFCharacter::FinishGetUp()
 {
 	HP = MaxHP;
 	StateManager->SetState(NewObject<UIdleState>(this));
+ 
 }
 
 void ADFCharacter::RecoverHandleInput()
@@ -481,7 +515,7 @@ void ADFCharacter::SetAllBonesMass(float InMass)
 	{
 		float Mass = GetMesh()->GetBoneMass(Name);
 		GetMesh()->SetMassOverrideInKg(Name, InMass, true);
-		UE_LOG(LogTemp, Log, TEXT("Bone %s Mass: %.2f"), *Name.ToString(), Mass);
+		UE_LOG(LogInitialize, Log, TEXT("Bone %s Mass: %.2f"), *Name.ToString(), Mass);
 	}
 }
 
@@ -491,9 +525,8 @@ float ADFCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
 	Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
 	float DamageApplied = FMath::Min(HP, DamageAmount);
-	HP -= DamageApplied;
-
-	UE_LOG(LogTemp, Log, TEXT("[%s] 데미지 받음: %.2f, 남은 HP: %.2f (가해자: %s)"),
+	
+	UE_LOG(LogDamaged, Log, TEXT("[%s] 데미지 받음: %.2f, 남은 HP: %.2f (가해자: %s)"),
 		*GetName(), DamageApplied, HP - DamageApplied,
 		DamageCauser ? *DamageCauser->GetName() : TEXT("알 수 없음"));
 	
@@ -517,7 +550,11 @@ AActor* ADFCharacter::GetActualTarget_Implementation()
 
 FVector ADFCharacter::GetResistanceForce_Implementation(AActor* PullingActor)
 {
-	if (!PullingActor || !IsValid(PullingActor)) return FVector::ZeroVector;
+	if (!PullingActor ||
+		!IsValid(PullingActor) ||
+		(StateManager->CurrentState->GetStateType() == ECharacterStateType::Stunned)
+		)
+		return FVector::ZeroVector;
 	
 	FVector Velocity = GetMovementComponent()->Velocity;
 	FVector Direction = (GetActorLocation() - PullingActor->GetActorLocation()).GetSafeNormal();
@@ -530,34 +567,45 @@ FVector ADFCharacter::GetResistanceForce_Implementation(AActor* PullingActor)
 	float MovementAgainst = FVector::DotProduct(Velocity.GetSafeNormal(), Direction);
 	// 속도에 따라 저항력이 바뀌도록. 
 	float DynamicResistance = MovementAgainst * Mass * 50.f;
-
+	
 	// 멀어질 수 있는 거리를 정하도록 거리 계산
 	float Distance = FVector::Dist(GetActorLocation(), PullingActor->GetActorLocation());
 	const float MaxEffectiveDistance = 150.f; // 최대 1.5미터까지 멀어지기 가능
 	const float ResistanceMultiplier = 200.f; // 거리 초과시 저항력 증가 배율
-
+		
 	// 최대 거리 초과 계산. 최대 거리보다 가까우면 0임.
 	float OverDistance = FMath::Max(Distance - MaxEffectiveDistance, 0.f);
 	// 최대 거리보다 가까우면 0.
 	float DistanceBasedResistance = OverDistance * ResistanceMultiplier;
+	
+	
 	// 기본 저항력 + 동적 저항력 + 거리 비례 저항력
 	float TotalResistance = BaseResistance + FMath::Max(DynamicResistance, 0.f) + DistanceBasedResistance;
 	
 	return Direction * TotalResistance; // 총 저항력 -> 이동 방향에 반대되는 방향으로 적용
 }
 
-void ADFCharacter::OnGrabbed_Implementation(AActor* Grabber)
+void ADFCharacter::OnGrabbed_Implementation(AActor* TargetActor)
 {
-	if (!Grabber || !MovementModifier) return;
-	MovementModifier->RegisterGrabInteraction(Grabber);
+	if (!TargetActor || !MovementModifier) return;
+	MovementModifier->RegisterGrabInteraction(TargetActor);
 	StateManager->SetState(NewObject<UGrabbedState>(this));
 }
 
-void ADFCharacter::OnGrabReleased_Implementation(AActor* Grabber)
+void ADFCharacter::OnGrabbedBy_Implementation(AActor* Grabber)
 {
-	if (!Grabber || !MovementModifier) return;
+	MovementModifier->RegisterGrabInteraction(Grabber);
+}
+
+void ADFCharacter::OnGrabReleased_Implementation(AActor* TargetActor)
+{
+	if (!TargetActor || !MovementModifier) return;
+	MovementModifier->UnregisterGrabInteraction(TargetActor);
+}
+
+void ADFCharacter::OnGrabReleasedBy_Implementation(AActor* Grabber)
+{
 	MovementModifier->UnregisterGrabInteraction(Grabber);
-	StateManager->SetState(NewObject<UGrabbedState>(this));
 }
 
 UPrimitiveComponent* ADFCharacter::GetRoot_Implementation()

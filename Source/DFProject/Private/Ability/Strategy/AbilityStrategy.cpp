@@ -17,7 +17,7 @@ void UAbilityStrategy::EndAbility_Implementation(AActor* TargetActor)
 	bIsAbilityActive = false;
 }
 
-bool UAbilityStrategy::CanActivateAbility_Implementation(AActor* TargetActor) const
+bool UAbilityStrategy::CanActivateAbility_Implementation(AActor* TargetActor)
 {
 	if (!TargetActor->HasAuthority()) return false; 
 	if (bIsAbilityActive) return false; //이미 실행 중

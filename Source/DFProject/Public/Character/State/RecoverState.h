@@ -19,10 +19,13 @@ public:
 	virtual void Exit(ADFCharacter* Character) override;
 	virtual ECharacterStateType GetStateType() const override {return ECharacterStateType::Recover;}
 
+	virtual bool CanChangeToState(ECharacterStateType NewState) override;
 private:
 	UPROPERTY()
 	FQuat InitialRecoveryRotation;
 	
 	float RecoverAlpha = 0.0f;
 	float RecoverSpeed = 0.8f;
+	bool bRecoverFinished = false;
 };
+

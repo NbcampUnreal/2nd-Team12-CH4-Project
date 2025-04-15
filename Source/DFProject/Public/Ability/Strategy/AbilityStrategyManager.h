@@ -9,8 +9,8 @@ class UAbilityStrategy;
 /**
  * 
  */
-UCLASS()
-class DFPROJECT_API UAbilityStrategyManager : public UObject
+UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
+class DFPROJECT_API UAbilityStrategyManager : public UActorComponent
 {
 	GENERATED_BODY()
 public:
@@ -23,8 +23,11 @@ public:
 	bool IsAbilityActive(FName AbilityName) const;
 
 	void ClearAllAbilities();
-
+	void InitializeAbilities();
+	UPROPERTY(EditAnywhere, Category=Ability)
+	TMap<FName, TSubclassOf<UAbilityStrategy>> InitialAbilities;
 protected:
+	
 	UPROPERTY()
 	TMap<FName, TObjectPtr<UAbilityStrategy>> RegisteredAbilities;
 };

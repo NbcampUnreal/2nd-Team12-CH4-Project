@@ -17,9 +17,6 @@ class DFPROJECT_API UCharacterStateManager : public UActorComponent
 public:	
 	UCharacterStateManager();
 
-protected:
-	virtual void BeginPlay() override;
-
 public:	
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 

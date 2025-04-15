@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "BodyPartAbilityStrategy.h"
-#include "Ability/Strategy/AbilityStrategy.h"
 #include "HeadbuttAbilityStrategy.generated.h"
 
 /**

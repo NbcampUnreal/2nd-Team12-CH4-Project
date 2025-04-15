@@ -4,6 +4,7 @@
 #include "Character/State/StunnedState.h"
 
 #include "Character/DFCharacter.h"
+#include "Character/MovementModifierComponent.h"
 #include "Components/CapsuleComponent.h"
 
 void UStunnedState::Tick(ADFCharacter* Character, float DeltaTime)
@@ -28,11 +29,15 @@ void UStunnedState::Enter(ADFCharacter* Character)
 	SMesh->bPauseAnims = true;
 	SMesh->SetSimulatePhysics(true); // 메시에 피직스 적용 (모두 다)
 	Character->PhysicalAnimComp->SetStrengthMultiplyer(0.0f); // 완전한 래그돌처럼 보이기 위해 래그돌 비율을 최대로
-
 	Character->Server_ReleaseGrab_Implementation();
+
+	Character->MovementModifier->bApplyGrabResistance = false;
 }
 
-void UStunnedState::Exit(ADFCharacter* Character)
+
+bool UStunnedState::CanChangeToState(ECharacterStateType NewState)
 {
-	Super::Exit(Character);
+	if (NewState == ECharacterStateType::Grabbed) return false;
+
+	return true;
 }

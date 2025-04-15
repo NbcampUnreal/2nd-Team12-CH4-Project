@@ -10,18 +10,8 @@
 UCharacterStateManager::UCharacterStateManager()
 {
 	PrimaryComponentTick.bCanEverTick = true;
-
 }
 
-
-// Called when the game starts
-void UCharacterStateManager::BeginPlay()
-{
-	Super::BeginPlay();
-}
-
-
-// Called every frame
 void UCharacterStateManager::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	if (CurrentState) CurrentState->Tick(this->GetOwner<ADFCharacter>(), DeltaTime);

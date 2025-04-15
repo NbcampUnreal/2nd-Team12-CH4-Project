@@ -12,6 +12,7 @@ UHeadbuttAbilityStrategy::UHeadbuttAbilityStrategy()
 {
 	CoolTime = 0.3f;
 	ImpulsePower = 50000.f;
+	BaseDamage = 50.f;
 }
 
 void UHeadbuttAbilityStrategy::ActivateAbility_Implementation(AActor* TargetActor)

@@ -11,6 +11,7 @@ UPunchAbilityStrategy::UPunchAbilityStrategy()
 {
 	CoolTime = 0.3f;
 	ImpulsePower = 30000.f;
+	BaseDamage = 10.f;
 }
 
 void UPunchAbilityStrategy::ActivateAbility_Implementation(AActor* TargetActor)

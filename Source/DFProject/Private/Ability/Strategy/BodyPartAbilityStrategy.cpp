@@ -3,6 +3,7 @@
 
 #include "Ability/Strategy/BodyPartAbilityStrategy.h"
 
+#include "Character/DFCharacter.h"
 #include "Components/SphereComponent.h"
 #include "GameFramework/Character.h"
 #include "Kismet/GameplayStatics.h"
@@ -24,11 +25,6 @@ void UBodyPartAbilityStrategy::BeginOverlapEvent_Implementation(UPrimitiveCompon
 	{
 		// 충돌 방향
 		FVector Dir = (OtherActor->GetActorLocation() - OwningBodyPart->GetActorLocation()).GetSafeNormal();
-
-		// 공격자의 속도 기반으로 충격량 추정 (속도 * 질량)
-		FVector Velocity = OwningBodyPart->GetBodyCollider()->GetComponentVelocity();
-		float ImpactForce = Velocity.Size() * VirtualMass;
-
 		ACharacter* HitCharacter = Cast<ACharacter>(OtherActor);
 
 		if (!HitCharacter)
@@ -39,25 +35,37 @@ void UBodyPartAbilityStrategy::BeginOverlapEvent_Implementation(UPrimitiveCompon
 				HitCharacter = OtherBodyPart->GetOwningCharacter();
 			}
 		}
-
-		if (HitCharacter)
+		
+		if (HitCharacter && !DamagedActor.Contains(HitCharacter))
 		{
+			// 공격자의 속도 기반으로 충격량 구해 추가 데미지 부여 (속도 * 질량)
+			FVector Velocity = OwningBodyPart->GetBodyCollider()->GetComponentVelocity();
+			float ImpactForce = Velocity.Size() * VirtualMass;
+			float ImpactDamage = ComputeDamage(ImpactForce);
+
+			UE_LOG(LogDamaged, Log, TEXT("ImpactForce: %f"), ImpactForce);
+			
 			UGameplayStatics::ApplyDamage(
 				HitCharacter,
-				ImpactForce * 0.0002f,
+				BaseDamage + ImpactDamage,
 				BodyPartOwner->GetController(),
 				BodyPartOwner.Get(),
 				UDamageType::StaticClass()
 			);
+
+			DamagedActor.Add(HitCharacter);
 		}
 	}
 }
 
-bool UBodyPartAbilityStrategy::CanActivateAbility_Implementation(AActor* TargetActor) const
+bool UBodyPartAbilityStrategy::CanActivateAbility_Implementation(AActor* TargetActor)
 {
 	if (!Super::CanActivateAbility_Implementation(TargetActor)) return false;
 
-	// 아직 보류
+	ABodyPart* BodyPart = Cast<ABodyPart>(TargetActor);
+	if (!BodyPart) EndAbility(TargetActor);
+	OwningBodyPart = BodyPart;
+	BodyPartOwner = OwningBodyPart->GetOwningCharacter();
 	
 	return true;
 }
@@ -65,11 +73,6 @@ bool UBodyPartAbilityStrategy::CanActivateAbility_Implementation(AActor* TargetA
 void UBodyPartAbilityStrategy::StartAbility_Implementation(AActor* TargetActor)
 {
 	if (!CanActivateAbility_Implementation(TargetActor)) return;
-	
-	ABodyPart* BodyPart = Cast<ABodyPart>(TargetActor);
-	if (!BodyPart) EndAbility(TargetActor);
-	OwningBodyPart = BodyPart;
-	BodyPartOwner = OwningBodyPart->GetOwningCharacter();
 	
 	if (OwningBodyPart->GetBodyCollider())
 	{
@@ -103,4 +106,10 @@ void UBodyPartAbilityStrategy::EndAbility_Implementation(AActor* TargetActor)
 
 	OwningBodyPart = nullptr;
 	BodyPartOwner = nullptr;
+	DamagedActor.Empty();
+}
+
+float UBodyPartAbilityStrategy::ComputeDamage(float ImpactForce)
+{
+	return DamageCurve ? DamageCurve->GetFloatValue(ImpactForce) : 0.0f;
 }
