@@ -19,12 +19,15 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "PhysicsEngine/PhysicalAnimationComponent.h"
+#include "DirGravity/Public/GravityMovementComponent.h"
 
 DEFINE_LOG_CATEGORY(LogDamaged);
 DEFINE_LOG_CATEGORY(LogInitialize);
 
-ADFCharacter::ADFCharacter()
+ADFCharacter::ADFCharacter(const FObjectInitializer& ObjectInitializer)
+	:Super(ObjectInitializer.SetDefaultSubobjectClass<UGravityMovementComponent>(ACharacter::CharacterMovementComponentName))
 {
+	
 	PrimaryActorTick.bCanEverTick = true;
 	bUseControllerRotationYaw = false;
 	
@@ -61,6 +64,9 @@ ADFCharacter::ADFCharacter()
 void ADFCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+	UE_LOG(LogTemp, Warning, TEXT("Current MovementComponent: %s"), *GetCharacterMovement()->GetClass()->GetName());
+	UpdateSpringArmOrientation();
 	GetMesh()->bPauseAnims = true;
 	MeshOffset = GetMesh()->GetRelativeTransform();
 	StateManager->SetState(NewObject<UIdleState>(this));
@@ -79,22 +85,14 @@ void ADFCharacter::UpdateSpringArmOrientation()
 {
 	if (!SpringArm) return;
 
-	FVector GravityDir = GetGravityDirection();
-	FVector ArmForward = SpringArm->GetForwardVector();
-	FVector DesiredRight = FVector::CrossProduct(GravityDir, ArmForward).GetSafeNormal();
-	FVector DesiredUp = FVector::CrossProduct(ArmForward, DesiredRight).GetSafeNormal();
+	const FVector CharacterUp = GetActorUpVector();
+	const FVector CameraForward = FRotationMatrix(FRotator(0.f, SpringYaw, 0.f)).GetUnitAxis(EAxis::X);
+	const FVector AdjustedForward = FVector::VectorPlaneProject(CameraForward, CharacterUp).GetSafeNormal();
 
-	FMatrix RotMatrix;
-	RotMatrix.SetAxis(0, ArmForward); // X
-	RotMatrix.SetAxis(1, DesiredRight); // Y
-	RotMatrix.SetAxis(2, DesiredUp); // Z
+	const FRotator CameraRot = FRotationMatrix::MakeFromXZ(AdjustedForward, CharacterUp).Rotator();
+	const FRotator FinalRot = CameraRot + FRotator(-25.f, 0.f, 0.f);
 
-	FRotator NewRot = RotMatrix.Rotator();
-
-	// 기존 Yaw 보존
-	FRotator LocalRot = SpringArm->GetRelativeRotation();
-	NewRot.Yaw = LocalRot.Yaw;
-	SpringArm->SetRelativeRotation(NewRot);
+	SpringArm->SetWorldRotation(FinalRot);
 }
 
 void ADFCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -197,6 +195,11 @@ bool ADFCharacter::EventOnDestroy()
 	return MovementModifier->UnregisterAll();;
 }
 
+UGravityMovementComponent* ADFCharacter::GetGravityMovementComponent()
+{
+	return Cast<UGravityMovementComponent>(GetMovementComponent());
+}
+
 void ADFCharacter::Move(const FInputActionValue& Value)
 {
 	if (StateManager->CurrentState->GetStateType() == ECharacterStateType::Stunned) return;
@@ -231,9 +234,7 @@ void ADFCharacter::Move(const FInputActionValue& Value)
 		SetActorRotation(NewRotation);
 		// CharacterMovementComponent는 Replication 지원해서 AddMovementInput으로
 		AddMovementInput(MovementDirection.GetSafeNormal());
-
-		//GetMovementComponent()->
-		
+		//UpdateSpringArmOrientation();
 		if (!HasAuthority()) Server_Move(NewRotation); //클라면 서버에게 요청
 		else Multicast_Move(NewRotation);  // 서버(리슨서버 주인)이면 바로 멀티캐스트 
 	}
@@ -264,27 +265,27 @@ void ADFCharacter::StopSprint(const FInputActionValue& Value)
 void ADFCharacter::Look(const FInputActionValue& Value)
 {
 	const FVector2D LookValue = Value.Get<FVector2D>();
-
+	
 	if (!SpringArm) return;
-	//FVector GravityDir = GetGravityDirection();
-	//FVector CharacterRight = GetActorRightVector();
-	//FVector RotationAxis = FVector::CrossProduct(GravityDir, CharacterRight).GetSafeNormal();
-	//FQuat DeltaRotationQuat = FQuat(RotationAxis, FMath::DegreesToRadians(LookValue.X));
-	//SpringArm->AddLocalRotation(DeltaRotationQuat);
-
-	//FVector GravityDir = GetGravityDirection(); // 예: (0, 0, -1)
-	//float YawInput = LookValue.X;
-
-	//FQuat DeltaRotationQuat = FQuat(GravityDir.GetSafeNormal(), FMath::DegreesToRadians(YawInput));
-	//SpringArm->AddWorldRotation(DeltaRotationQuat);
-
+	
 	FRotator CurrentRotation = SpringArm->GetRelativeRotation();
 	if (LookValue.X != 0.0f)
 	{
 		CurrentRotation.Yaw += LookValue.X;
 	}
-
+	
 	SpringArm->SetRelativeRotation(CurrentRotation);
+
+	//const FVector2D LookValue = Value.Get<FVector2D>();
+	//if (!SpringArm) return;
+//
+	//// 누적 Yaw 입력만 처리 (Pitch는 고정)
+	//if (LookValue.X != 0.0f)
+	//{
+	//	SpringYaw += LookValue.X;
+	//}
+//
+	//UpdateSpringArmOrientation();
 }
 
 

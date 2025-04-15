@@ -8,6 +8,7 @@
 #include "PhysicsEngine/PhysicalAnimationComponent.h"
 #include "DFCharacter.generated.h"
 
+class UGravityMovementComponent;
 class UAbilityStrategyManager;
 class UCharacterStateManager;
 class UMovementModifierComponent;
@@ -31,17 +32,25 @@ class DFPROJECT_API ADFCharacter : public ACharacter, public IGrabbable
 	GENERATED_BODY()
 
 public:
-	ADFCharacter();
+	ADFCharacter(const FObjectInitializer& ObjectInitializer);
 
 protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;  
 public:
-	void UpdateSpringArmOrientation();
 	
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-
+	
 	bool EventOnDestroy();
+
+	UFUNCTION(BlueprintCallable)
+	UGravityMovementComponent* GetGravityMovementComponent();
+
+	
+	UFUNCTION(BlueprintCallable)
+	void UpdateSpringArmOrientation();
+
+	float SpringYaw = 0.f;
 	////// 캐릭터 액션
 	void Move(const FInputActionValue& Value);
 	
