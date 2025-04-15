@@ -25,7 +25,7 @@ protected:
 	bool IsNearNavEdge(const FVector& Location, FVector& OutDirection) const;
 
 	// DeadZone 탐지
-	bool IsNearDeadZones(const FVector& Location, FVector& OutDirection) const;
+	bool IsNearDeadZones(const FVector& Location, FVector& OutDirection, FVector& OutNearestZoneLoc) const;
 
 protected:
 	/** 블랙보드 키 */
@@ -34,6 +34,10 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "Blackboard")
 	FName IsNearDangerKey;
+
+	/** 던기기용 **/
+	UPROPERTY(EditAnywhere, Category = "Blackboard")
+	FName DangerDirectionKey;
 
 	/** 위험 지점으로부터 피할 거리 */
 	UPROPERTY(EditAnywhere, Category = "Config")
