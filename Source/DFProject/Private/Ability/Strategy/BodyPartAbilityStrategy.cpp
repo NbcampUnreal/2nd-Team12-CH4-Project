@@ -63,16 +63,19 @@ bool UBodyPartAbilityStrategy::CanActivateAbility_Implementation(AActor* TargetA
 	if (!Super::CanActivateAbility_Implementation(TargetActor)) return false;
 
 	ABodyPart* BodyPart = Cast<ABodyPart>(TargetActor);
-	if (!BodyPart) EndAbility(TargetActor);
+	if (!BodyPart) return false;
+	
 	OwningBodyPart = BodyPart;
 	BodyPartOwner = OwningBodyPart->GetOwningCharacter();
+	
+	if (!BodyPartOwner.Get()) return false;
 	
 	return true;
 }
 
 void UBodyPartAbilityStrategy::StartAbility_Implementation(AActor* TargetActor)
 {
-	if (!CanActivateAbility_Implementation(TargetActor)) return;
+	if (!CanActivateAbility(TargetActor)) return;
 	
 	if (OwningBodyPart->GetBodyCollider())
 	{
@@ -90,7 +93,7 @@ void UBodyPartAbilityStrategy::StartAbility_Implementation(AActor* TargetActor)
 	TimerDelegate.BindUFunction(this, FName("EndAbility"), TargetActor);
 	GetWorld()->GetTimerManager().SetTimer(AbilityEndTimerHandle, TimerDelegate, AttackValidDuration, false);
 
-	ActivateAbility_Implementation(TargetActor);
+	ActivateAbility(TargetActor);
 }
 
 void UBodyPartAbilityStrategy::EndAbility_Implementation(AActor* TargetActor)

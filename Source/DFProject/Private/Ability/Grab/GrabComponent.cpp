@@ -88,33 +88,41 @@ void UGrabComponent::DetectClosestGrabbable()
 		}
 		
 		float DistSq = FVector::DistSquared(Hit.ImpactPoint, GetOwner()->GetActorLocation()); // 액터 위치와의 거리
-		if (DistSq < ClosestDistanceSq) // 가장 가까운 액터 찾기
+
+		if (DistSq >= ClosestDistanceSq)
+		{
+			continue;
+		}
+
+		USceneComponent* RootComp = IGrabbable::Execute_GetRoot(HitActor);
+		if (!RootComp)
+		{
+			continue;
+		}
+
+		const TArray<FName> SocketNames = IGrabbable::Execute_GetGrabSocketNames(HitActor);
+		const bool bHasSockets = SocketNames.Num() > 0;
+
+		if (!bHasSockets)
+		{
+			// 소켓이 전혀 없다면: 액터 유지 + 임팩트 포인트
+			ClosestDistanceSq = DistSq;
+			ClosestActor = HitActor;
+			CurrentTargetLocation = Hit.ImpactPoint;
+			continue;
+		}
+
+		// 소켓이 있다면 RequiredSocketName을 찾아본다
+		if (RootComp->DoesSocketExist(RequiredSocketName))
 		{
 			ClosestDistanceSq = DistSq;
 			ClosestActor = HitActor;
-
-			TArray<FName> SocketNames = ClosestActor->GetRootComponent()->GetAllSocketNames();
-
-			bool bFoundSocket = false;
-
-			for (const FName& SocketName : SocketNames)
-			{
-				if (SocketName == RequiredSocketName)
-				{
-					USceneComponent* RootComp = ClosestActor->GetRootComponent();
-					if (RootComp && RootComp->DoesSocketExist(SocketName))
-					{
-						CurrentTargetLocation = RootComp->GetSocketLocation(SocketName);
-						bFoundSocket = true;
-					}
-					break;
-				}
-			}
-
-			if (!bFoundSocket)
-			{
-				CurrentTargetLocation = Hit.ImpactPoint;
-			}
+			CurrentTargetLocation = RootComp->GetSocketLocation(RequiredSocketName);
+		}
+		else
+		{
+			// 소켓은 있지만 이름이 다르면 무시
+			ClosestActor = nullptr;
 		}
 	}
 

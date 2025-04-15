@@ -171,7 +171,7 @@ void ADFCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 	PunchAction,
 	ETriggerEvent::Triggered,
 	this,
-	&ADFCharacter::Punch
+	&ADFCharacter::BasicAttack
 	);
 
 	EnhancedInputComponent->BindAction(
@@ -427,7 +427,7 @@ void ADFCharacter::SpawnBodyParts()
 	GetMesh()->bPauseAnims = false; // 클라는 애니메이션 재생 시작
 }
 
-void ADFCharacter::Punch(const FInputActionValue& Value)
+void ADFCharacter::BasicAttack(const FInputActionValue& Value)
 {
 	if (StateManager->CurrentState->GetStateType() == ECharacterStateType::Idle)
 		Server_Punch();
@@ -458,6 +458,7 @@ void ADFCharacter::Server_UseItem_Implementation()
 	AActor* GrabActor = RightGrabComp->GetGrabTargetActor();
 	if (!GrabActor) return;
 	
+	AbilityManager->StartAbility("UseItem", this);
 	IGrabbable::Execute_Use(GrabActor);
 }
 

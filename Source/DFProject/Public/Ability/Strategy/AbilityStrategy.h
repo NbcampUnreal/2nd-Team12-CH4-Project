@@ -15,16 +15,16 @@ class DFPROJECT_API UAbilityStrategy : public UObject
 {
 	GENERATED_BODY()
 public:
-	UFUNCTION(BlueprintNativeEvent)
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
 	void StartAbility(AActor* TargetActor);
 
-	UFUNCTION(BlueprintNativeEvent)
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
 	void ActivateAbility(AActor* TargetActor);
 	
-	UFUNCTION(BlueprintNativeEvent)
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
 	void EndAbility(AActor* TargetActor);
 	
-	UFUNCTION(BlueprintNativeEvent)
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
 	bool CanActivateAbility(AActor* TargetActor);
 
 	UPROPERTY(EditAnywhere, Category="Ability")

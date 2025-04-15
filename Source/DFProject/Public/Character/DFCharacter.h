@@ -51,7 +51,7 @@ public:
 	UFUNCTION(NetMulticast, Unreliable)
 	void Multicast_Move(const FRotator& Rotation);
 	
-	void Punch(const FInputActionValue& Value);
+	void BasicAttack(const FInputActionValue& Value);
 
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void Server_Punch();
@@ -134,6 +134,8 @@ public:
 	virtual void OnGrabReleasedBy_Implementation(AActor* Grabber) override;
 
 	virtual UPrimitiveComponent* GetRoot_Implementation() override;
+
+
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category=Camera)
 	TObjectPtr<USpringArmComponent> SpringArm;

@@ -9,7 +9,7 @@ void UAbilityStrategy::StartAbility_Implementation(AActor* TargetActor)
 	
 	bIsAbilityActive = true;
 	LastUsedTime = GetWorld()->GetTimeSeconds();
-	ActivateAbility_Implementation(TargetActor);
+	ActivateAbility(TargetActor);
 }
 
 void UAbilityStrategy::EndAbility_Implementation(AActor* TargetActor)
