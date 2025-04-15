@@ -41,15 +41,10 @@ void ADFDeadZone::OnOverlapBegin(AActor* OverlappedActor, AActor* OtherActor)
         return;
     }
 
-    // 먼저 OtherActor를 APawn으로 캐스팅 시도
     APawn* OverlappingPawn = Cast<APawn>(OtherActor);
     if (!OverlappingPawn)
     {
-        // 만약 직접 캐스팅이 실패하면, OtherActor의 Outer에서 Pawn을 찾습니다.
         OverlappingPawn = OtherActor->GetTypedOuter<APawn>();
-
-        // Outer에서도 찾지 못하면, 추가로 Owner에서 Pawn을 찾습니다.
-        // (래그돌 상태의 경우, 충돌이 SkeletalMeshComponent를 통해 발생하여 Owner를 통해 본 소유 Pawn을 얻을 수 있음)
         if (!OverlappingPawn)
         {
             OverlappingPawn = Cast<APawn>(OtherActor->GetOwner());
@@ -58,9 +53,15 @@ void ADFDeadZone::OnOverlapBegin(AActor* OverlappedActor, AActor* OtherActor)
 
     if (OverlappingPawn && IsValid(OverlappingPawn))
     {
+        // 만약 Pawn이 "NoDeadZone" 태그를 갖고 있다면, 데드존 처리 건너뜁니다.
+        if (OverlappingPawn->Tags.Contains(FName("NoDeadZone")))
+        {
+            UE_LOG(LogTemp, Log, TEXT("[DeadZoneVolume] Pawn %s is immune (just respawned)."), *OverlappingPawn->GetName());
+            return;
+        }
+
         UE_LOG(LogTemp, Log, TEXT("[DeadZoneVolume] Pawn %s entered the dead zone."), *OverlappingPawn->GetName());
 
-        // 서버 권한(Authority)이 있는 경우에만 처리 (서버에서만 로직 실행)
         if (OverlappingPawn->HasAuthority())
         {
             ADFBattleGameMode* GM = Cast<ADFBattleGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
