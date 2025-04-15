@@ -23,8 +23,22 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "GameMode")
 	bool HasTimedOut() const;
 
+	// 게임 시작 시간 (BeginPlay()에서 설정)
+	float GameStartTime;
+
+	// 모드 선택: 자유전 또는 팀전
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "GameMode")
+	EBattleModeType BattleMode;
+
 	// 플레이어가 장외 상태일 때 호출되는 함수 재정의 (리스폰 방식으로 변경)
 	virtual void HandlePlayerOutOfBounds(APawn* Pawn) override;
+
+	// 팀전 모드용 팀 점수
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Team")
+	int32 Team1Score;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Team")
+	int32 Team2Score;
 
 protected:
 	// 게임 시작 시 초기화

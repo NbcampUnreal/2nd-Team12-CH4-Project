@@ -22,6 +22,15 @@ enum class EBattleGameState : uint8
 
 };
 
+// 팀전, 개인전(자유전) 모드를 구분하는 열거형
+UENUM(BlueprintType)
+enum class EBattleModeType : uint8
+{
+    TeamBased UMETA(DisplayName = "Team Based"),
+    FreeForAll UMETA(DisplayName = "Free For All")
+};
+
+
 // 게임 상태 변경 시 발생시킬 이벤트 (블루프린트와 연동 가능)
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnGameModeStateChangedSignature, EBattleGameState, NewState);
 
@@ -60,8 +69,10 @@ public:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Game Settings")
     float GracePeriod;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Game Settings")
-	ACameraActor* SpectatorCamera; // 관전 카메라 액터 (사전에 레벨에 배치해둔 카메라 액터를 참조)
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Game Settings")
+    ACameraActor* SpectatorCamera; // 관전 카메라 액터 (사전에 레벨에 배치해둔 카메라 액터를 참조)
+
+    void InitializePlayerScores();
 
 protected:
     // 게임이 시작된 시간을 저장 (초 단위)

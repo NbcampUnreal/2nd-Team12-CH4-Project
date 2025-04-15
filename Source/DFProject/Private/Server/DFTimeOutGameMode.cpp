@@ -9,50 +9,73 @@
 #include "Camera/CameraActor.h"
 #include "GameFramework/PlayerStart.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "AI/DFAIController.h"
 #include "Character/DFCharacter.h"
-
+#include "Server/DFTimeOutGameMode.h"
+#include "Server/DFBattleGameState.h"
+#include "AIController.h"
 
 ADFTimeOutGameMode::ADFTimeOutGameMode()
 {
-	// 기본 타임아웃 시간 (예: 300초)
-	TimeoutDuration = 300.f;
-	// 기본 리스폰 딜레이 (예: 5초)
-	RespawnDelay = 5.f;
+    // 기본 타임아웃 시간 (예: 300초)
+    TimeoutDuration = 300.f;
+    // 기본 리스폰 딜레이 (예: 5초)
+    RespawnDelay = 5.f;
+    PrimaryActorTick.bCanEverTick = true;
+
+    // 기본 모드는 자유전(개인전)으로 설정 (프로젝트 요구에 따라 TeamBased로 변경 가능)
+    BattleMode = EBattleModeType::FreeForAll;
+
+    Team1Score = 0;
+    Team2Score = 0;
+
+    // 기본 게임 상태
+    CurrentGameState = EBattleGameState::InProgress;
+
+    PrimaryActorTick.bCanEverTick = true;
 }
 
 void ADFTimeOutGameMode::BeginPlay()
 {
 
-	Super::BeginPlay();
+    Super::BeginPlay();
 
-	// 타임아웃 발생 시 호출되는 함수 등록
-	GetWorld()->GetTimerManager().SetTimer(TimeoutHandle, this, &ADFTimeOutGameMode::OnTimeout, TimeoutDuration, false);
+    // 게임 시작 시간 기록
+    GameStartTime = GetWorld()->GetTimeSeconds();
+
+    // 타임아웃 발생 시 호출되는 함수 등록
+    GetWorld()->GetTimerManager().SetTimer(TimeoutHandle, this, &ADFTimeOutGameMode::OnTimeout, TimeoutDuration, false);
+
+    // 게임 시작 시 플레이어 점수를 초기화 (모드에 상관없이)
+    InitializePlayerScores();
 }
 
 void ADFTimeOutGameMode::Tick(float DeltaSeconds)
 {
-	// Tick에서 타임아웃 여부를 다시 체크하여 안전하게 게임을 종료
-	if (HasTimedOut() && CurrentGameState == EBattleGameState::InProgress)
-	{
-		EndGame();
-	}
+    // Tick에서 타임아웃 여부를 다시 체크하여 안전하게 게임을 종료
+    if (HasTimedOut() && CurrentGameState == EBattleGameState::InProgress)
+    {
+        EndGame();
+    }
 }
 
 void ADFTimeOutGameMode::EndGame()
 {
-	UE_LOG(LogTemp, Warning, TEXT("타임아웃에 도달하여 게임 종료"));
+    UE_LOG(LogTemp, Warning, TEXT("타임아웃에 도달하여 게임 종료"));
 
-	if (CurrentGameState == EBattleGameState::Ended)
-	{
-		return;
-	}
+    // 새 게임 시작이나 종료 전에 플레이어 점수 초기화
+    InitializePlayerScores();
+
+    if (CurrentGameState == EBattleGameState::Ended)
+        return;
+
+    CurrentGameState = EBattleGameState::Ended;
+    // 추가적으로 최종 승자 결정 등 처리를 여기에 구현할 수 있음.
 }
 
 bool ADFTimeOutGameMode::HasTimedOut() const
 {
-	// 게임 시작 후 경과한 시간이 TimeoutDuration보다 크거나 같으면 타임아웃
-	return (GetWorld()->GetTimeSeconds() - GameStartTime) >= TimeoutDuration;
+    // 게임 시작 후 경과한 시간이 TimeoutDuration보다 크거나 같으면 타임아웃
+    return (GetWorld()->GetTimeSeconds() - GameStartTime) >= TimeoutDuration;
 }
 
 void ADFTimeOutGameMode::HandlePlayerOutOfBounds(APawn* Pawn)
@@ -62,23 +85,19 @@ void ADFTimeOutGameMode::HandlePlayerOutOfBounds(APawn* Pawn)
 
     UE_LOG(LogTemp, Log, TEXT("HandlePlayerOutOfBounds: 플레이어 %s 장외 감지"), *Pawn->GetName());
 
-    // 플레이어의 컨트롤러 및 PlayerState 확인
     AController* Controller = Pawn->GetController();
     if (Controller && IsValid(Controller))
     {
-        // 플레이어의 PlayerState를 통해 마지막으로 데미지를 준 공격자 확인 (ADFPlayerState 사용 가정)
         ADFPlayerState* PS = Cast<ADFPlayerState>(Controller->PlayerState);
+        // 공격자 정보가 있을 경우
         if (PS && PS->LastDamageDealer)
         {
+            // 플레이어 컨트롤러 처리
             if (APlayerController* PC = Cast<APlayerController>(Controller))
             {
-                // Pawn 포인터를 미리 저장 (UnPossess 후에도 사용하기 위해)
                 APawn* CachedPawn = Pawn;
-
                 PC->UnPossess();
                 PC->StartSpectatingOnly();
-
-                // 즉시 전환되지 않을 경우, 타이머를 사용하여 딜레이 후에 카메라 전환
                 FTimerHandle TempHandle;
                 GetWorldTimerManager().SetTimer(TempHandle, FTimerDelegate::CreateLambda([PC, this]()
                     {
@@ -88,15 +107,60 @@ void ADFTimeOutGameMode::HandlePlayerOutOfBounds(APawn* Pawn)
                         }
                     }), 0.1f, false);
 
-                // 공격자의 PlayerState에 점수를 추가
                 ADFPlayerState* AttackerPS = Cast<ADFPlayerState>(PS->LastDamageDealer);
                 if (AttackerPS)
                 {
-                    AttackerPS->AddIndividualScore(1);
+                    if (BattleMode == EBattleModeType::TeamBased)
+                    {
+                        if (AttackerPS->TeamID == 1)
+                        {
+                            Team1Score++;
+                        }
+                        else if (AttackerPS->TeamID == 2)
+                        {
+                            Team2Score++;
+                        }
+                    }
+                    else // FreeForAll 모드
+                    {
+                        AttackerPS->AddIndividualScore(1);
+                    }
                     UE_LOG(LogTemp, Log, TEXT("공격자 %s 에게 점수 추가"), *AttackerPS->GetPlayerName());
                 }
+                RespawnPlayer(Controller, CachedPawn);
+                return;
+            }
+            // AI 컨트롤러 처리: AAIController 사용
+            else if (AAIController* AIController = Cast<AAIController>(Controller))
+            {
+                APawn* CachedPawn = Pawn;
+                AIController->UnPossess();
+                FTimerHandle TempHandle;
+                GetWorldTimerManager().SetTimer(TempHandle, FTimerDelegate::CreateLambda([this]()
+                    {
+                        // AI의 경우 별도 카메라 전환은 생략합니다.
+                    }), 0.1f, false);
 
-                // Pawn이 UnPossess() 호출 후에도 존재하므로, RespawnPlayer에서 CachedPawn을 활용하도록 수정 필요
+                ADFPlayerState* AttackerPS = Cast<ADFPlayerState>(PS->LastDamageDealer);
+                if (AttackerPS)
+                {
+                    if (BattleMode == EBattleModeType::TeamBased)
+                    {
+                        if (AttackerPS->TeamID == 1)
+                        {
+                            Team1Score++;
+                        }
+                        else if (AttackerPS->TeamID == 2)
+                        {
+                            Team2Score++;
+                        }
+                    }
+                    else // FreeForAll
+                    {
+                        AttackerPS->AddIndividualScore(1);
+                    }
+                    UE_LOG(LogTemp, Log, TEXT("공격자 %s 에게 점수 추가"), *AttackerPS->GetPlayerName());
+                }
                 RespawnPlayer(Controller, CachedPawn);
                 return;
             }
@@ -105,18 +169,15 @@ void ADFTimeOutGameMode::HandlePlayerOutOfBounds(APawn* Pawn)
                 Controller->UnPossess();
             }
         }
+        // 공격자 정보가 없을 경우
         else
         {
             UE_LOG(LogTemp, Log, TEXT("공격자 정보 없음"));
-
             if (APlayerController* PC = Cast<APlayerController>(Controller))
             {
-                // Pawn 포인터 미리 저장
                 APawn* CachedPawn = Pawn;
-
                 PC->UnPossess();
                 PC->StartSpectatingOnly();
-
                 FTimerHandle TempHandle;
                 GetWorldTimerManager().SetTimer(TempHandle, FTimerDelegate::CreateLambda([PC, this]()
                     {
@@ -125,7 +186,18 @@ void ADFTimeOutGameMode::HandlePlayerOutOfBounds(APawn* Pawn)
                             PC->SetViewTargetWithBlend(SpectatorCamera, 0.5f);
                         }
                     }), 0.1f, false);
-
+                RespawnPlayer(Controller, CachedPawn);
+                return;
+            }
+            else if (AAIController* AIController = Cast<AAIController>(Controller))
+            {
+                APawn* CachedPawn = Pawn;
+                AIController->UnPossess();
+                FTimerHandle TempHandle;
+                GetWorldTimerManager().SetTimer(TempHandle, FTimerDelegate::CreateLambda([this]()
+                    {
+                        // AI 카메라 처리 생략
+                    }), 0.1f, false);
                 RespawnPlayer(Controller, CachedPawn);
                 return;
             }
@@ -135,19 +207,18 @@ void ADFTimeOutGameMode::HandlePlayerOutOfBounds(APawn* Pawn)
             }
         }
     }
-
-    // 만약 Controller가 유효하지 않다면 기본 RespawnPlayer() 호출 (여기서는 Pawn 포인터가 없으므로 별도 처리가 필요)
-    RespawnPlayer(Controller, Pawn);
+    // 컨트롤러가 없으면 Pawn Destroy 처리
+    Pawn->Destroy();
 }
 
 
 void ADFTimeOutGameMode::OnTimeout()
 {
-	UE_LOG(LogTemp, Warning, TEXT("타임아웃 발생: %f초가 경과."), TimeoutDuration);
-	if (CurrentGameState == EBattleGameState::InProgress)
-	{
-		EndGame();
-	}
+    UE_LOG(LogTemp, Warning, TEXT("타임아웃 발생: %f초가 경과."), TimeoutDuration);
+    if (CurrentGameState == EBattleGameState::InProgress)
+    {
+        EndGame();
+    }
 }
 
 void ADFTimeOutGameMode::RespawnPlayer(AController* Controller, APawn* PawnToRespawn)
@@ -201,22 +272,20 @@ void ADFTimeOutGameMode::RespawnPlayer(AController* Controller, APawn* PawnToRes
             // 컨트롤러가 Pawn을 다시 소유
             Controller->Possess(PawnToRespawn);
 
-            // DFPlayerController라면 전용 초기화 로직을 수행.
+            // PlayerController라면 전용 초기화 로직을 수행.
             if (APlayerController* PC = Cast<APlayerController>(Controller))
             {
-                // 만약 DFPlayerController에 커스텀 초기화 함수가 있다면 호출
-                // 예: DFPC->InitializeAfterPossess();
                 // 카메라 전환 (블렌드 시간 0.0f로 즉시 전환)
                 PC->SetViewTargetWithBlend(PawnToRespawn, 0.0f);
                 // 입력 활성화 - DFPlayerController에서 입력 바인딩이 제대로 설정되어 있어야 함
                 PawnToRespawn->EnableInput(PC);
-                
+
                 if (ADFCharacter* DFCharacter = Cast<ADFCharacter>(PawnToRespawn))
                 {
                     DFCharacter->RecoverStart();
                 }
             }
-            else if (ADFAIController* AIController = Cast<ADFAIController>(Controller))
+            else
             {
                 UE_LOG(LogTemp, Log, TEXT("AI Pawn %s 부활"), *PawnToRespawn->GetName());
                 // AI 컨트롤러의 경우 추가 초기화가 필요하면 수행
