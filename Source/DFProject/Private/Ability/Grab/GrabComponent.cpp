@@ -91,8 +91,30 @@ void UGrabComponent::DetectClosestGrabbable()
 		if (DistSq < ClosestDistanceSq) // 가장 가까운 액터 찾기
 		{
 			ClosestDistanceSq = DistSq;
-			ClosestActor = HitActor;			
-			CurrentTargetLocation = Hit.ImpactPoint;
+			ClosestActor = HitActor;
+
+			TArray<FName> SocketNames = ClosestActor->GetRootComponent()->GetAllSocketNames();
+
+			bool bFoundSocket = false;
+
+			for (const FName& SocketName : SocketNames)
+			{
+				if (SocketName == RequiredSocketName)
+				{
+					USceneComponent* RootComp = ClosestActor->GetRootComponent();
+					if (RootComp && RootComp->DoesSocketExist(SocketName))
+					{
+						CurrentTargetLocation = RootComp->GetSocketLocation(SocketName);
+						bFoundSocket = true;
+					}
+					break;
+				}
+			}
+
+			if (!bFoundSocket)
+			{
+				CurrentTargetLocation = Hit.ImpactPoint;
+			}
 		}
 	}
 
@@ -163,6 +185,11 @@ void UGrabComponent::SetGrabState(EGrabState NewState)
 EGrabState UGrabComponent::GetCurrentGrabState()
 {
 	return CurrentState;
+}
+
+AActor* UGrabComponent::GetGrabTargetActor()
+{
+	return GrabbedTargetInfo.TargetActor ? GrabbedTargetInfo.TargetActor : nullptr;
 }
 
 bool UGrabComponent::IsValidGrabTarget(AActor* Actor) const

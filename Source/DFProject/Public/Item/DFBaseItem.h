@@ -14,12 +14,16 @@ enum class EItemType : uint8
 	Effect,
 };
 
+class ADFItemBaseActor;
+
 UCLASS()
 class DFPROJECT_API UDFBaseItem : public UPrimaryDataAsset
 {
 	GENERATED_BODY()
 	
 public:	
+	UDFBaseItem();
+
 	UPROPERTY(EditAnywhere, Category = "Item")
 	FName ItemID;
 
@@ -46,6 +50,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Item")
 	FName GetItemId() const;
+
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<ADFItemBaseActor> ItemActorClass;
 
 	virtual FPrimaryAssetId GetPrimaryAssetId() const override;
 };

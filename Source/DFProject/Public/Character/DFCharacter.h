@@ -38,7 +38,7 @@ protected:
 	virtual void Tick(float DeltaTime) override;  
 public:
 	void UpdateSpringArmOrientation();
-
+	
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 	bool EventOnDestroy();
@@ -55,6 +55,10 @@ public:
 
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void Server_Punch();
+	
+	UFUNCTION(Server, Reliable, BlueprintCallable)
+	void Server_UseItem();
+	
 	
 	void StartSprint(const FInputActionValue& Value); //  CharacterMovement의 스피드 올리기 (이건 자동 리플), 달리기 이펙트 생성
 

@@ -3,6 +3,7 @@
 #include "BehaviorTree/BlackboardComponent.h"
 #include "Character/DFCharacter.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Level/DFDeadZoneComponent.h"
 #include "DFProject.h"
 
 UBTTask_Move::UBTTask_Move()
@@ -179,6 +180,19 @@ bool UBTTask_Move::ShouldJump(ADFCharacter* MyCharacter) const
 	if (bHit)
 	{
 		AActor* HitActor = HitResult.GetActor();
+
+		if (HitActor && HitActor->GetClass()->ImplementsInterface(UGrabbable::StaticClass()))
+		{
+			LOG_WARNING(TEXT("ShouldJump: HitActor is Grabbable. Ignore jump."));
+			return false;
+		}
+
+		if (HitActor && HitActor->FindComponentByClass<UDFDeadZoneComponent>())
+		{
+			LOG_WARNING(TEXT("ShouldJump: HitActor has DFDeadZoneComponent. Ignore jump."));
+			return false;
+		}
+
 
 		if (HitActor && HitActor->IsA<ADFCharacter>())
 		{

@@ -25,8 +25,8 @@ class DFPROJECT_API IGrabbable
 
 public:
 
-	//UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Grabbable")
-	//TArray<FName> GetPreferredGrabSocketNames() const;
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Grabbable")
+	TArray<FName> GetGrabSocketNames() const;
 
 	//UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Grabbable")
 	//EGrabMode GetGrabMode() const;
@@ -51,4 +51,7 @@ public:
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category="Grabbable")
 	UPrimitiveComponent* GetRoot();
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category="Grabbable")
+	void Use();
 };

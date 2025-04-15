@@ -59,6 +59,7 @@ public:
 
 	EGrabState GetCurrentGrabState();
 
+	AActor* GetGrabTargetActor();
 	
 	UPROPERTY(BlueprintAssignable, Category = "GrabEvents")
 	FOnGrabStart OnGrabbed;
@@ -68,6 +69,8 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "GrabEvents")
 	FOnGrabFailed OnGrabFailed;
+
+	
 protected:
 	void DetectClosestGrabbable();
 	
@@ -76,6 +79,8 @@ protected:
 	FVector ComputeDetectionStart() const;
 	FVector ComputeDetectionEnd() const;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FName RequiredSocketName;
 	
 	UPROPERTY()
 	AActor* CurrentTarget;

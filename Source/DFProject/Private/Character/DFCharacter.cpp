@@ -361,7 +361,7 @@ void ADFCharacter::Server_Headbutt_Implementation()
 	if (StateManager->CurrentState->GetStateType() == ECharacterStateType::Stunned) return;
 	
 	if (!BodyParts.Contains(EBodyPartType::Head) || !BodyParts[EBodyPartType::Head]) return;
-
+	
 	AbilityManager->StartAbility(TEXT("Headbutt"), BodyParts[EBodyPartType::Head]);
 }
 
@@ -429,7 +429,10 @@ void ADFCharacter::SpawnBodyParts()
 
 void ADFCharacter::Punch(const FInputActionValue& Value)
 {
-	Server_Punch();
+	if (StateManager->CurrentState->GetStateType() == ECharacterStateType::Idle)
+		Server_Punch();
+	else if (StateManager->CurrentState->GetStateType() == ECharacterStateType::Grabbed)
+		Server_UseItem();
 }
 
 void ADFCharacter::Server_Punch_Implementation()
@@ -446,6 +449,18 @@ void ADFCharacter::Server_Punch_Implementation()
 
 	bLeft = !bLeft;	
 }
+
+
+void ADFCharacter::Server_UseItem_Implementation()
+{
+	if (StateManager->CurrentState->GetStateType() != ECharacterStateType::Grabbed) return;
+
+	AActor* GrabActor = RightGrabComp->GetGrabTargetActor();
+	if (!GrabActor) return;
+	
+	IGrabbable::Execute_Use(GrabActor);
+}
+
 
 void ADFCharacter::ApplyPhysicalAnimationSettings()
 {

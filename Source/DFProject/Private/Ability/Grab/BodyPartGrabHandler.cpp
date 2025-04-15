@@ -30,10 +30,6 @@ void UBodyPartGrabHandler::BeginDestroy()
 	{
 		GrabConstraint->BreakConstraint();
 	}
-
-	//GrabConstraint = nullptr;
-	//Root = nullptr;
-	//CurrentGrabTarget = nullptr;
 }
 
 void UBodyPartGrabHandler::Initialize(ABodyPart* BodyPart)

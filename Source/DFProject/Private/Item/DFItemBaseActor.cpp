@@ -56,8 +56,8 @@ void ADFItemBaseActor::SetupItem(UDFItemInstance* NewInstance)
 
 void ADFItemBaseActor::OnGripAreaBeginOverlap(
 	UPrimitiveComponent* OverlappedComponent,
-	AActor* OterActor,
-	UPrimitiveComponent* OtherCompm,
+	AActor* OtherActor,
+	UPrimitiveComponent* OtherComp,
 	int32 OtherBodyIndex,
 	bool bFromSweep,
 	const FHitResult& SweepResult)
@@ -116,7 +116,7 @@ void ADFItemBaseActor::AbilitiesMainAction()
 	}
 }
 
-FName ADFItemBaseActor::GetCurrentnItemId() const
+FName ADFItemBaseActor::GetCurrentItemId() const
 {
 	return ItemInstance->ItemData->GetItemId();
 }
