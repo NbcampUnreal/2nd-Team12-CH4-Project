@@ -37,4 +37,6 @@ public:
 protected:
 	UFUNCTION()
 	void OnRep_StateType();
+
+	void SetStateByType(ECharacterStateType NewState);
 };

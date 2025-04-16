@@ -338,7 +338,9 @@ void ADFCharacter::Multicast_Move_Implementation(const FRotator& NewRotation)
 
 void ADFCharacter::StartSprint(const FInputActionValue& Value)
 {
-	if (StateManager->CurrentState->GetStateType() == ECharacterStateType::Stunned) return;
+	if (StateManager->IsCurrentState(ECharacterStateType::Stunned) ||
+		StateManager->IsCurrentState(ECharacterStateType::Recover)
+		) return;
 
 	GetCharacterMovement()->MaxWalkSpeed = 800.f;
 }
@@ -382,7 +384,7 @@ void ADFCharacter::StartGrab(const FInputActionValue& Value)
 
 void ADFCharacter::Server_StartGrab_Implementation()
 {
-	if (StateManager->CurrentState->GetStateType() != ECharacterStateType::Idle) return;
+	if (!StateManager->IsCurrentState(ECharacterStateType::Idle)) return;
 
 	if (!BodyParts.Contains(EBodyPartType::LeftFist) || !BodyParts.Contains(EBodyPartType::RightFist)) return;
 	
@@ -409,8 +411,6 @@ void ADFCharacter::ReleaseGrab(const FInputActionValue& Value)
 
 void ADFCharacter::Server_ReleaseGrab_Implementation()
 {
-	if (StateManager->CurrentState->GetStateType() == ECharacterStateType::Idle) return;
-
 	if (!BodyParts.Contains(EBodyPartType::LeftFist) || !BodyParts.Contains(EBodyPartType::RightFist)) return;
 
 	if (LeftGrabComp && LeftGrabComp->GetCurrentGrabState() == EGrabState::Grabbing)
@@ -423,13 +423,13 @@ void ADFCharacter::Server_ReleaseGrab_Implementation()
 		RightGrabComp->Released();
 	}
 
-	if (StateManager->CurrentState->GetStateType() == ECharacterStateType::Grabbed)
+	if (StateManager->IsCurrentState(ECharacterStateType::Grabbed))
 		StateManager->SetState(NewObject<UIdleState>(this));
 }
 
 void ADFCharacter::Server_StopGrab_Implementation()
 {
-	if (StateManager->CurrentState->GetStateType() == ECharacterStateType::Stunned) return;
+	//if (StateManager->IsCurrentState(ECharacterStateType::Stunned)) return;
 
 	if (!BodyParts.Contains(EBodyPartType::LeftFist) || !BodyParts.Contains(EBodyPartType::RightFist)) return;
 	
@@ -455,24 +455,28 @@ void ADFCharacter::Server_Headbutt_Implementation()
 
 void ADFCharacter::StartJump(const FInputActionValue& Value)
 {
-	if (StateManager->CurrentState->GetStateType() == ECharacterStateType::Stunned)
+	if (StateManager->IsCurrentState(ECharacterStateType::Stunned))
 	{
 		RecoverHandleInput(); // 연타 처리 함수
 	}
-	else Super::Jump();
+	else if (
+		StateManager->IsCurrentState(ECharacterStateType::Idle) ||
+		StateManager->IsCurrentState(ECharacterStateType::Grabbed)
+		)
+		Super::Jump();
 }
 
 void ADFCharacter::BasicAttack(const FInputActionValue& Value)
 {
-	if (StateManager->CurrentState->GetStateType() == ECharacterStateType::Idle)
+	if (StateManager->IsCurrentState(ECharacterStateType::Idle))
 		Server_Punch();
-	else if (StateManager->CurrentState->GetStateType() == ECharacterStateType::Grabbed)
+	else if (StateManager->IsCurrentState(ECharacterStateType::Grabbed))
 		Server_UseItem();
 }
 
 void ADFCharacter::Server_Punch_Implementation()
 {
-	if (StateManager->CurrentState->GetStateType() != ECharacterStateType::Idle) return;
+	if (!StateManager->IsCurrentState(ECharacterStateType::Idle)) return;
 	
 	if (!BodyParts.Contains(EBodyPartType::LeftFist) || !BodyParts.Contains(EBodyPartType::RightFist)) return;
 
@@ -487,7 +491,7 @@ void ADFCharacter::Server_Punch_Implementation()
 
 void ADFCharacter::Server_UseItem_Implementation()
 {
-	if (StateManager->IsCurrentState(ECharacterStateType::Grabbed)) return;
+	if (!StateManager->IsCurrentState(ECharacterStateType::Grabbed)) return;
 
 	AActor* GrabActor = RightGrabComp->GetGrabTargetActor();
 	if (!GrabActor) return;
@@ -504,7 +508,7 @@ void ADFCharacter::Stun()
 
 void ADFCharacter::RecoverStart()
 {
-	if (StateManager->CurrentState->GetStateType() == ECharacterStateType::Recover) return;
+	if (StateManager->IsCurrentState(ECharacterStateType::Recover)) return;
 	
 	StateManager->SetState(NewObject<URecoverState>(this));
 }
@@ -518,7 +522,7 @@ void ADFCharacter::FinishGetUp()
 
 void ADFCharacter::RecoverHandleInput()
 {
-	if (StateManager->CurrentState->GetStateType() != ECharacterStateType::Recover) return;
+	if (!StateManager->IsCurrentState(ECharacterStateType::Recover)) return;
 
 	RecoverInputCount++;
 
@@ -552,8 +556,11 @@ float ADFCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
 		*GetName(), DamageApplied, HP - DamageApplied,
 		DamageCauser ? *DamageCauser->GetName() : TEXT("알 수 없음"));
 	
-	if (StateManager->CurrentState->GetStateType() == ECharacterStateType::Stunned) return DamageApplied;
-
+	if (
+		StateManager->IsCurrentState(ECharacterStateType::Stunned) ||
+		StateManager->IsCurrentState(ECharacterStateType::Recover)
+		) return DamageApplied;
+	
 	HP -= DamageApplied;
 
 	if (HP <= 0.f)
@@ -574,7 +581,7 @@ FVector ADFCharacter::GetResistanceForce_Implementation(AActor* PullingActor)
 {
 	if (!PullingActor ||
 		!IsValid(PullingActor) ||
-		(StateManager->CurrentState->GetStateType() == ECharacterStateType::Stunned)
+		(StateManager->IsCurrentState(ECharacterStateType::Stunned))
 		)
 		return FVector::ZeroVector;
 	

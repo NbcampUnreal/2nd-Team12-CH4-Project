@@ -5,6 +5,10 @@
 
 #include "Character/DFCharacter.h"
 #include "Character/State/CharacterStateBase.h"
+#include "Character/State/GrabbedState.h"
+#include "Character/State/IdleState.h"
+#include "Character/State/RecoverState.h"
+#include "Character/State/StunnedState.h"
 #include "Net/UnrealNetwork.h"
 
 // Sets default values for this component's properties
@@ -43,18 +47,42 @@ bool UCharacterStateManager::IsCurrentState(ECharacterStateType StateType) const
 
 void UCharacterStateManager::OnRep_StateType()
 {
-	//switch (CurrentStateType)
-	//{
-	//case ECharacterStateType::Stunned:
-	//	// 클라에서 스턴 이펙트 재생
-	//		break;
+	SetStateByType(CurrentStateType);
+}
+
+void UCharacterStateManager::SetStateByType(ECharacterStateType NewState)
+{
+	ADFCharacter* Character = Cast<ADFCharacter>(GetOwner());
+	if (!Character) return;
+	
+	if (CurrentState)
+	{
+		CurrentState->Exit(Character);
+	}
+
+	switch (NewState)
+	{
+	case ECharacterStateType::Grabbed:
+		CurrentState = NewObject<UGrabbedState>(this);
+		break;
+	case ECharacterStateType::Recover:
+		CurrentState = NewObject<URecoverState>(this);
+		break;
+	case ECharacterStateType::Stunned:
+		CurrentState = NewObject<UStunnedState>(this);
+		break;
 	//case ECharacterStateType::Dead:
-	//
-	//		break;
-	//case ECharacterStateType::Idle:
-	//default:
-	//	// 기본 상태 처리
+	//	CurrentState = NewObject<UDeadState>(this);
 	//	break;
-	//}
+	case ECharacterStateType::Idle:
+	default:
+		CurrentState = NewObject<UIdleState>(this);
+		break;
+	}
+
+	if (CurrentState)
+	{
+		CurrentState->Enter(Character);
+	}
 }
 
