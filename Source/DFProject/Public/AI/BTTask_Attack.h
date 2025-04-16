@@ -5,6 +5,7 @@
 #include "Character/DFCharacter.h"
 #include "BTTask_Attack.generated.h"
 
+
 UCLASS()
 class DFPROJECT_API UBTTask_Attack : public UBTTaskNode
 {
@@ -17,5 +18,10 @@ protected:
 	virtual EBTNodeResult::Type ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) override;
 
 private:
-	FName SelectedAttackTypeKey;
+	FName AILevelKey;
+
+	FTimerHandle PunchTimerHandle;
+
+	void HandlePunch(ADFCharacter* MyCharacter);
+	void HandleHeadbutt(ADFCharacter* MyCharacter);
 };

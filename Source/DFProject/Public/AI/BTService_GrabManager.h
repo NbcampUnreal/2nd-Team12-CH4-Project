@@ -28,6 +28,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Blackboard")
 	FName CanGrabKey;
 
+	UPROPERTY(EditAnywhere, Category = "Blackboard")
+	FName AILevelKey;
+
 	/** 그랩 감지 범위 (기본 800) */
 	UPROPERTY(EditAnywhere, Category = "Config")
 	float GrabDetectRadius;

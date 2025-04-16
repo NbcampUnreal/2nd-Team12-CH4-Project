@@ -1,13 +1,15 @@
 #include "AI/BTTask_Attack.h"
-#include "AIController.h"
+#include "AI/DFAIController.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "Character/DFCharacter.h"
+#include "Character/State/CharacterStateManager.h"
+#include "Character/State/CharacterStateBase.h"
 #include "DFProject.h"
 
 UBTTask_Attack::UBTTask_Attack()
 {
 	NodeName = TEXT("Attack");
-	SelectedAttackTypeKey = TEXT("AttackType");
+	AILevelKey = TEXT("AILevel");
 }
 
 EBTNodeResult::Type UBTTask_Attack::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
@@ -39,24 +41,58 @@ EBTNodeResult::Type UBTTask_Attack::ExecuteTask(UBehaviorTreeComponent& OwnerCom
 		LOG_WARNING(TEXT("Cant found TargetActor in Blackboard."));
 		return EBTNodeResult::Failed;
 	}
+	
+	const uint8 RawAILevel = BlackboardComp->GetValueAsEnum(AILevelKey);
+	EAI_AILevels AILevel = static_cast<EAI_AILevels>(RawAILevel);
 
-	const uint8 AttackType = BlackboardComp->GetValueAsEnum(SelectedAttackTypeKey);
-
-	if (AttackType == 2)
+	float HeadbuttRate = 0.f;
+	switch (AILevel)
 	{
-		MyCharacter->Server_Headbutt();
-		LOG_WARNING(TEXT("AttackTask: Headbutt"));
-		return EBTNodeResult::Succeeded;
-	}
-	else if (AttackType == 1)
-	{
-		MyCharacter->Server_Punch();
-		LOG_WARNING(TEXT("AttackTask: Punch"));
-		return EBTNodeResult::Succeeded;
+	case EAI_AILevels::Basic: HeadbuttRate = 0.3f; break;
+	case EAI_AILevels::Expert: HeadbuttRate = 0.4f; break;
+	default: HeadbuttRate = 0.f; break; // Rookie 등
 	}
 
-	LOG_WARNING(TEXT("AttackTask: AttackType = None"));
-	return EBTNodeResult::Failed;
+	const float RandValue = FMath::FRand();
+
+	if (RandValue < HeadbuttRate)
+	{
+		HandleHeadbutt(MyCharacter);
+		LOG_WARNING(TEXT("AttackTask: 선택된 공격 = Headbutt (%.2f)"), RandValue);
+	}
+	else
+	{
+		HandlePunch(MyCharacter);
+		LOG_WARNING(TEXT("AttackTask: 선택된 공격 = Punch (%.2f)"), RandValue);
+	}
+
+	return EBTNodeResult::Succeeded;
 }
 
-	
+void UBTTask_Attack::HandlePunch(ADFCharacter* MyCharacter)
+{
+	if (!MyCharacter) return;
+
+	MyCharacter->GetWorldTimerManager().ClearTimer(PunchTimerHandle);
+
+	MyCharacter->Server_Punch();
+	LOG_WARNING(TEXT("AttackTask: Punch (첫번째 팔)"));
+
+	MyCharacter->GetWorldTimerManager().SetTimer(
+		PunchTimerHandle,
+		[MyCharacter]() {
+			if (MyCharacter && MyCharacter->StateManager->IsCurrentState(ECharacterStateType::Idle))
+			{
+				MyCharacter->Server_Punch();
+				LOG_WARNING(TEXT("AttackTask: Punch (두번째 팔)"));
+			}
+		},
+		0.5f, false);
+}
+
+void UBTTask_Attack::HandleHeadbutt(ADFCharacter* MyCharacter)
+{
+	if (!MyCharacter) return;
+	MyCharacter->Server_Headbutt();
+	LOG_WARNING(TEXT("AttackTask: Headbutt"));
+}

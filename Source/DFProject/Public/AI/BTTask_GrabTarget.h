@@ -22,6 +22,8 @@ protected:
 
 	/** 블랙보드 키: Grab 대상 */
 	UPROPERTY(EditAnywhere, Category = "Blackboard")
-	FName GrabTargetActorKey = TEXT("GrabTargetActor");
-	
+	FName GrabTargetActorKey;
+
+private:
+	EBTNodeResult::Type EvaluateAndAttemptGrab(class ADFCharacter* MyCharacter, class ADFCharacter* TargetCharacter);
 };

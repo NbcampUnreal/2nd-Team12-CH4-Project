@@ -21,9 +21,6 @@ protected:
 	virtual void TickNode(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds) override;
 
 private:
-	FName TargetKey;
-	FName SelectedAttackTypeKey;
-
-	uint8 LastAttackType;
-
+	FName TargetKey; 
+	FName CanAttackKey; 
 };

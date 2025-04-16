@@ -3,7 +3,7 @@
 
 #include "AI/BTService_UpdateState.h"
 #include "BehaviorTree/BlackboardComponent.h"
-#include "AIController.h"
+#include "AI/DFAIController.h"
 #include "Character/DFCharacter.h"
 #include "Kismet/GameplayStatics.h" 
 #include "DFProject.h"

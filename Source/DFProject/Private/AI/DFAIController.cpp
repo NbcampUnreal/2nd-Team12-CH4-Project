@@ -3,13 +3,14 @@
 #include "BehaviorTree/BehaviorTree.h"
 #include "BehaviorTree/BlackboardData.h"
 #include "BehaviorTree/BlackboardComponent.h"
-#include "Kismet/GameplayStatics.h" // 추가: 액터 검색용
+#include "Kismet/GameplayStatics.h" 
 #include "Character/DFCharacter.h"
 
 ADFAIController::ADFAIController()
 {
 	Blackboard = CreateDefaultSubobject<UBlackboardComponent>(TEXT("Blackboard"));
 	BrainComponent = CreateDefaultSubobject<UBehaviorTreeComponent>(TEXT("BrainComponent"));
+	CurrentAILevel = EAI_AILevels::Expert;
 }
 
 void ADFAIController::BeginPlay()
@@ -18,8 +19,6 @@ void ADFAIController::BeginPlay()
 
 	APawn* ControlledPawn = GetPawn();
 	BeginAI(ControlledPawn);
-
-
 }
 
 void ADFAIController::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -35,30 +34,8 @@ void ADFAIController::BeginAI(APawn* InPawn)
 	{
 		if (UseBlackboard(BlackboardDataAsset, BlackboardComponent))
 		{
+			BlackboardComponent->SetValueAsEnum(TEXT("AILevel"), static_cast<int32>(CurrentAILevel));
 			bool bRunSucceeded = RunBehaviorTree(BehaviorTree);
-
-			/*TArray<AActor*> FoundActors;
-			UGameplayStatics::GetAllActorsOfClass(GetWorld(), ADFCharacter::StaticClass(), FoundActors);
-			AActor* ChosenTarget = nullptr;
-			for (AActor* Actor : FoundActors)
-			{
-				if (Actor != GetPawn())
-				{
-					ChosenTarget = Actor;
-					break;
-				}
-			}
-
-			if (ChosenTarget)
-			{
-				BlackboardComponent->SetValueAsObject(TEXT("TargetActor"), ChosenTarget);
-				LOG(Log, TEXT("TargetActor : %s"), *ChosenTarget->GetName());
-			}
-			else
-			{
-				LOG_WARNING(TEXT("No valid TargetActor."));
-			}*/
-			
 			CHECK(bRunSucceeded != BehaviorTree, )
 			LOG(Log, TEXT("Run Behavior Tree"))
 		}
@@ -72,4 +49,20 @@ void ADFAIController::EndAI()
 	{
 		BehaviorTreeComponent->StopTree();
 	}
+}
+
+/*Get Level*/
+void ADFAIController::Server_SetAILevel_Implementation(EAI_AILevels NewLevel)
+{
+	CurrentAILevel = NewLevel;
+
+	if (UBlackboardComponent* BlackboardComponent = Cast<UBlackboardComponent>(Blackboard))
+	{
+		BlackboardComponent->SetValueAsEnum(TEXT("AILevel"), static_cast<int32>(CurrentAILevel));
+	}
+}
+
+bool ADFAIController::Server_SetAILevel_Validate(EAI_AILevels NewLevel)
+{
+	return true;
 }

@@ -7,6 +7,14 @@
 class UBlackboardData;
 class UBehaviorTree;
 
+UENUM(BlueprintType)
+enum class EAI_AILevels : uint8
+{
+	Rookie UMETA(DisplayName = "Rookie"),
+	Basic UMETA(DisplayName = "Basic"),
+	Expert UMETA(DisplayName = "Expert")
+};
+
 UCLASS()
 class DFPROJECT_API ADFAIController : public AAIController
 {
@@ -18,9 +26,11 @@ public:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
+	UFUNCTION(Server, Reliable, WithValidation)
+	void Server_SetAILevel(EAI_AILevels NewLevel);
+
 protected:
 	void BeginAI(APawn* InPawn);
-	
 	void EndAI();
 
 private:
@@ -29,4 +39,7 @@ private:
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UBehaviorTree> BehaviorTree;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI", Meta = (AllowPrivateAccess = "true"))
+	EAI_AILevels CurrentAILevel;
 };

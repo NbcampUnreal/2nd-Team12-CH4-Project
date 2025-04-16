@@ -3,8 +3,10 @@
 
 #include "AI/BTTask_ThrowGrabbedTarget.h"
 #include "BehaviorTree/BlackboardComponent.h"
-#include "AIController.h"
+#include "AI/DFAIController.h"
 #include "Character/DFCharacter.h"
+#include "Character/State/CharacterStateManager.h"
+#include "Character/State/CharacterStateBase.h" 
 #include "GameFramework/CharacterMovementComponent.h"
 #include "DFProject.h"
 
@@ -13,10 +15,9 @@ UBTTask_ThrowGrabbedTarget::UBTTask_ThrowGrabbedTarget()
 	NodeName = TEXT("ThrowGrabbedTarget");
 
 	GrabTargetActorKey = TEXT("GrabTargetActor");
-	DangerDirectionKey = TEXT("DangerDirection");
 
-	ThrowPower = 1200.f;
-	ThrowDelay = 0.3f;
+	ThrowPower = 1000.f;
+	ThrowDelay = 1.0f;
 
 	bNotifyTick = false;
 }
@@ -37,63 +38,54 @@ EBTNodeResult::Type UBTTask_ThrowGrabbedTarget::ExecuteTask(UBehaviorTreeCompone
 		return EBTNodeResult::Failed;
 	}
 
-	FTimerDelegate ThrowDelegate;
-	ThrowDelegate.BindUObject(this, &UBTTask_ThrowGrabbedTarget::DelayedThrow, &OwnerComp);
+	UBlackboardComponent* BlackboardComp = OwnerComp.GetBlackboardComponent();
+	if (!BlackboardComp)
+	{
+		LOG_WARNING(TEXT("ExecuteTask : BlackboardComponent not found"));
+		return EBTNodeResult::Failed;
+	}
 
-	MyCharacter->GetWorldTimerManager().SetTimer(
-		DelayHandle,
-		ThrowDelegate,
-		ThrowDelay,
-		false
-	);
-	return EBTNodeResult::InProgress;
+	AActor* TargetActor = Cast<AActor>(BlackboardComp->GetValueAsObject(GrabTargetActorKey));
+	if (!TargetActor)
+	{
+		LOG_WARNING(TEXT("ExecuteTask : No Grabbed Target Actor"));
+		return EBTNodeResult::Failed;
+	}
+
+	return EvaluateAndAttemptThrow(MyCharacter, MyCharacter); 
 }
 
-void UBTTask_ThrowGrabbedTarget::DelayedThrow(UBehaviorTreeComponent* OwnerComp)
+EBTNodeResult::Type UBTTask_ThrowGrabbedTarget::EvaluateAndAttemptThrow(ADFCharacter* MyCharacter, ADFCharacter* TargetCharacter)
 {
-	if (!OwnerComp) return;
-
-	AAIController* AIController = OwnerComp->GetAIOwner();
-	if (!AIController) return;
-
-	ADFCharacter* MyCharacter = Cast<ADFCharacter>(AIController->GetPawn());
-	if (!MyCharacter) return;
-
-	UBlackboardComponent* BlackboardComp = OwnerComp->GetBlackboardComponent();
-	if (!BlackboardComp) return;
-
-	AActor* Target = Cast<AActor>(BlackboardComp->GetValueAsObject(GrabTargetActorKey));
-	if (!Target)
+	if (!MyCharacter)
 	{
-		LOG_WARNING(TEXT("Throw: GrabTargetActor 없음"));
-		FinishLatentTask(*OwnerComp, EBTNodeResult::Failed);
-		return;
+		LOG_WARNING(TEXT("GrabTask: MyCharacter 없음"));
+		return EBTNodeResult::Failed;
 	}
 
-	const FVector DangerDir = BlackboardComp->GetValueAsVector(DangerDirectionKey);
-	if (DangerDir.IsNearlyZero())
+	if (!TargetCharacter)
 	{
-		LOG_WARNING(TEXT("Throw: DangerDirection 없음"));
-		FinishLatentTask(*OwnerComp, EBTNodeResult::Failed);
-		return;
+		LOG_WARNING(TEXT("GrabTask: GrabTargetCharacter 없음"));
+		return EBTNodeResult::Failed;
 	}
 
-	// 던지기 전 그랩 해제
-	MyCharacter->Server_ReleaseGrab();
-
-	// Impulse 적용 (Z도 살짝 넣어 위로 던짐)
-	const FVector LaunchImpulse = DangerDir.GetSafeNormal() * ThrowPower + FVector(0.f, 0.f, 300.f);
-
-	UPrimitiveComponent* TargetRoot = Cast<UPrimitiveComponent>(Target->GetRootComponent());
-	if (TargetRoot && TargetRoot->IsSimulatingPhysics())
+	if (!TargetCharacter->StateManager || !TargetCharacter->StateManager->CurrentState)
 	{
-		TargetRoot->AddImpulse(LaunchImpulse, NAME_None, true);
-		LOG_WARNING(TEXT("🎯 던지기 Impulse 적용 → %s | 방향: %s"), *Target->GetName(), *LaunchImpulse.ToString());
-	}
-	else
-	{
-		LOG_WARNING(TEXT("Throw: 대상이 물리 적용 안 됨 → %s"), *Target->GetName());
+		LOG_WARNING(TEXT("GrabTask: 대상 상태 정보 없음"));
+		return EBTNodeResult::Failed;
 	}
 
-	FinishLatentTask(*OwnerComp, EBTNodeResult::Succeeded);
+	const ECharacterStateType TargetState = TargetCharacter->StateManager->CurrentState->GetStateType();
+	if (TargetState != ECharacterStateType::Stunned)
+	{
+		//LOG_WARNING(TEXT("ThrowTask: 대상이 스턴 상태 또는 그랩 상태 아님 (현재 상태: %d) → 실패"), static_cast<int32>(TargetState));
+		MyCharacter->Server_ReleaseGrab(); 
+		return EBTNodeResult::Failed;
+	}
+
+	MyCharacter->Server_ReleaseGrab();  
+
+	MyCharacter->Jump();
+
+	return EBTNodeResult::Succeeded;
 }

@@ -19,8 +19,6 @@ public:
 
 	virtual void TickNode(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds) override;
 
-	//void UpdateCooldown(UBlackboardComponent* BB, FName LastTimeKey, FName CooldownKey, float Interval);
-
 protected:
 	UPROPERTY(EditAnywhere, Category = "Blackboard")
 	FName TargetKey;

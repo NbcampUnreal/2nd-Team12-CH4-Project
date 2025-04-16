@@ -24,9 +24,6 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Blackboard")
 	FName GrabTargetActorKey;
 
-	UPROPERTY(EditAnywhere, Category = "Blackboard")
-	FName DangerDirectionKey;
-
 	// 던지는 힘
 	UPROPERTY(EditAnywhere, Category = "Throw")
 	float ThrowPower;
@@ -38,8 +35,6 @@ protected:
 	FTimerHandle DelayHandle;
 
 	// 던지기 실행 함수
-	UFUNCTION()
-	void DelayedThrow(UBehaviorTreeComponent* OwnerComp);
-
-	
+private:
+	EBTNodeResult::Type EvaluateAndAttemptThrow(class ADFCharacter* MyCharacter, class ADFCharacter* TargetCharacter);
 };
