@@ -7,11 +7,15 @@
 UENUM(BlueprintType)
 enum class EItemType : uint8
 {
-	Melee,
+	OneHand,
+	TwoHAnd,
 	Firearm,
 	Survive,
-	Wearable,
+	Eyes,
+	Head,
+	Fabric,
 	Effect,
+	Special,
 };
 
 class ADFItemBaseActor;

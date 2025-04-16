@@ -40,9 +40,9 @@ void ADFItemSpawner::SpawnItem()
 		UObject* Loaded = UAssetManager::Get().GetPrimaryAssetObject(ChosenId);
 		UDFBattleItem* LoadedItem = Cast<UDFBattleItem>(Loaded);
 	
-		if (!LoadedItem || !LoadedItem->ItemActorClass)
+		if (!LoadedItem)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("스포너 : 데이터 또는 액터클래스 없음"));
+			UE_LOG(LogTemp, Warning, TEXT("스포너 : 데이터 없음"));
 			return;			
 		}
 
@@ -56,7 +56,7 @@ void ADFItemSpawner::SpawnItem()
 			return;
 		}
 
-		ADFItemBaseActor* SpawnedActor = GetWorld()->SpawnActor<ADFItemBaseActor>(LoadedItem->ItemActorClass, SpawnTransform);
+		ADFItemBaseActor* SpawnedActor = GetWorld()->SpawnActor<ADFItemBaseActor>(ADFItemBaseActor::StaticClass(), SpawnTransform);
 
 		if (!SpawnedActor)
 		{

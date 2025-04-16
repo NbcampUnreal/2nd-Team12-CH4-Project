@@ -22,9 +22,17 @@ void ADFWearableItemActor::SetActor(UDFWearableItem* ItemDataToShow)
 	ItemData = ItemDataToShow;
 	FName SocketName = ItemData->EquipSocketName;
 
-	ItemMesh ->SetSkeletalMesh(ItemData->ItemMesh);
+	ItemMesh->SetSkeletalMesh(ItemData->ItemMesh);
 	ItemMesh->AttachToComponent(PreviewMesh, FAttachmentTransformRules::SnapToTargetIncludingScale, SocketName);
+	ItemMesh->SetCollisionProfileName(TEXT("Item"));
 
+	if (ItemData->ItemType == EItemType::Fabric)
+	{
+		ItemMesh->SetAllBodiesBelowSimulatePhysics(TEXT("FabricBone"), true, true);
+		ItemMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		ItemMesh->SetCollisionResponseToAllChannels(ECR_Ignore);
+		ItemMesh->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
+	}
 }
 
 

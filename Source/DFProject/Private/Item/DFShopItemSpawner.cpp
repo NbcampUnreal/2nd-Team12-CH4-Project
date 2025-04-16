@@ -22,11 +22,22 @@ void ADFShopItemSpawner::BeginPlay()
 {
 	Super::BeginPlay();	
 
-	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ATargetPoint::StaticClass(), SpawnPoints);
+	TArray<AActor*> TempArray;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ATargetPoint::StaticClass(), TempArray);
+
+	for (AActor* Actor : TempArray)
+	{
+		if (!IsValid(Actor) || Actor->IsPendingKillPending())
+		{
+			continue;
+		}
+
+		SpawnPoints.Add(Actor);
+	}
 
 	SpawnPoints.Sort([](const AActor& A, const AActor& B)
 		{
-			return A.GetName() < B.GetName();
+			return A.GetActorLabel() < B.GetActorLabel();
 		});
 }
 
@@ -45,8 +56,15 @@ void ADFShopItemSpawner::SpawnItemToShop()
 			return;
 	}
 
+	AssetIds.Sort([](const FPrimaryAssetId& A, const FPrimaryAssetId& B)
+		{
+			return A.PrimaryAssetName.LexicalLess(B.PrimaryAssetName);
+		});
+
 	for (int i = 0; i < AssetIds.Num(); i++)
 	{
+		GEngine->AddOnScreenDebugMessage(-1, 10.0f, FColor::Blue, FString::Printf(TEXT("Index : %d"), i));
+
 		UAssetManager::Get().LoadPrimaryAsset(AssetIds[i], {}, FStreamableDelegate::CreateLambda([=, this]() {
 			UObject* Loaded = UAssetManager::Get().GetPrimaryAssetObject(AssetIds[i]);
 			UDFWearableItem* LoadedItem = Cast<UDFWearableItem>(Loaded);
@@ -66,6 +84,10 @@ void ADFShopItemSpawner::SpawnItemToShop()
 			{
 				return;
 			}
+
+			FString Name = SpawnPoints[i]->GetActorLabel();
+
+			GEngine->AddOnScreenDebugMessage(-1, 10.0f, FColor::Blue, FString::Printf(TEXT("SpawnPoint %d : %s"), i, *Name));
 
 			FTransform SpawnTransform = SetSpawnTransform(i);
 
