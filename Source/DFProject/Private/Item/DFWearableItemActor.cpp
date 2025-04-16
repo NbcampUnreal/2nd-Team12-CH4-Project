@@ -10,11 +10,6 @@ ADFWearableItemActor::ADFWearableItemActor()
 
 	PreviewMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("PreviewMesh"));
 	PreviewMesh->SetupAttachment(Scene);
-
-	ItemMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("ItemMesh"));
-	ItemMesh->SetupAttachment(PreviewMesh);
-
-	
 }
 
 void ADFWearableItemActor::SetActor(UDFWearableItem* ItemDataToShow)

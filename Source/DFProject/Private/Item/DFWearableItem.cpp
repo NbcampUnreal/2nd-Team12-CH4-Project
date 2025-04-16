@@ -3,3 +3,7 @@
 
 #include "Item/DFWearableItem.h"
 
+UDFWearableItem::UDFWearableItem()
+{
+	AssetType = FPrimaryAssetType(TEXT("WearableItem"));
+}
