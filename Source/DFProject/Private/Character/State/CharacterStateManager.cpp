@@ -17,6 +17,13 @@ UCharacterStateManager::UCharacterStateManager()
 	PrimaryComponentTick.bCanEverTick = true;
 }
 
+void UCharacterStateManager::BeginPlay()
+{
+	Super::BeginPlay();
+
+	SetIsReplicated(true);
+}
+
 void UCharacterStateManager::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);

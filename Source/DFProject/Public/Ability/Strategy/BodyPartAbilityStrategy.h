@@ -7,9 +7,6 @@
 #include "Character/BodyPart/BodyPart.h"
 #include "BodyPartAbilityStrategy.generated.h"
 
-/**
- * 
- */
 UCLASS()
 class DFPROJECT_API UBodyPartAbilityStrategy : public UAbilityStrategy
 {

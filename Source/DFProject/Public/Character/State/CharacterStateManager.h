@@ -17,6 +17,8 @@ class DFPROJECT_API UCharacterStateManager : public UActorComponent
 
 public:	
 	UCharacterStateManager();
+
+	virtual void BeginPlay() override;
 	
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 

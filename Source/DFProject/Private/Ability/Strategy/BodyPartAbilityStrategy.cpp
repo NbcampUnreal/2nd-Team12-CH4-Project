@@ -14,12 +14,14 @@ void UBodyPartAbilityStrategy::BeginOverlapEvent_Implementation(UPrimitiveCompon
 		int32 OtherBodyIndex,
 		bool bFromSweep,
 		const FHitResult& SweepResult)
-{	
+{
+	if (!OwningBodyPart.IsValid() || !OwningBodyPart->HasAuthority()) return; // 서버에서만 데미지 처리
+	
 	if (!OtherActor ||
 		OtherActor == OwningBodyPart->GetOwner() ||
 		OtherActor->GetOwner() == OwningBodyPart->GetOwner()
 		)
-		return;
+		return; // 자신이면 패스
 	
 	if (UPrimitiveComponent* HitComp = Cast<UPrimitiveComponent>(OtherComp))
 	{
