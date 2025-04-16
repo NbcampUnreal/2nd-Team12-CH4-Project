@@ -44,8 +44,6 @@ void ADFTimeOutGameMode::BeginPlay()
 {
     Super::BeginPlay();
 
-    GameStartTime = GetWorld()->GetTimeSeconds();
-
     // Timeout 타이머 설정: TimeoutDuration이 지나면 OnTimeout() 호출
     GetWorld()->GetTimerManager().SetTimer(TimeoutHandle, this, &ADFTimeOutGameMode::OnTimeout, TimeoutDuration, false);
 

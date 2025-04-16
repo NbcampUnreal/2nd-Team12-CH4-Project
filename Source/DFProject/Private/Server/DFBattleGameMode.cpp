@@ -27,7 +27,7 @@ void ADFBattleGameMode::BeginPlay()
 	TArray<AActor*> FoundCameras;
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ACameraActor::StaticClass(), FoundCameras);
 
-	// "Spectator" 라는 액터 태크를 가진 카메라 액터를 찾는다.
+	// "Spectator" 태그가 붙은 카메라 액터를 찾는다.
 	for (AActor* Actor : FoundCameras)
 	{
 		if (Actor->Tags.Contains(TEXT("Spectator")))
@@ -38,7 +38,6 @@ void ADFBattleGameMode::BeginPlay()
 		}
 	}
 
-	// 찾지 못한 경우 경고 로그 출력
 	if (!SpectatorCamera)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Spectator 이름의 카메라 액터를 찾지 못했습니다."));
@@ -47,8 +46,8 @@ void ADFBattleGameMode::BeginPlay()
 	// 게임 시작 시 현재 시간을 기록
 	GameStartTime = GetWorld()->GetTimeSeconds();
 
-	// 모든 초기화가 완료되면 게임 상태를 InProgress로 전환
-	SetGameState(EBattleGameState::InProgress);
+	// 게임 시작 후 3초 뒤에 GameState를 InProgress로 전환하도록 타이머 설정
+	GetWorldTimerManager().SetTimer(DelayTimerHandle, this, &ADFBattleGameMode::SetGameStateToInProgress, 3.f, false);
 }
 
 void ADFBattleGameMode::Tick(float DeltaSeconds)
@@ -219,4 +218,10 @@ void ADFBattleGameMode::SetGameState(EBattleGameState NewState)
 		// 상태 변경 시 블루프린트에 이벤트 브로드캐스트 (클라이언트가 직접 접근하지는 않지만, UI 업데이트 등 서버 내 로직에 활용 가능)
 		OnGameStateChanged.Broadcast(CurrentGameState);
 	}
+}
+
+void ADFBattleGameMode::SetGameStateToInProgress()
+{
+	SetGameState(EBattleGameState::InProgress);
+	UE_LOG(LogTemp, Log, TEXT("GameState가 InProgress로 전환되었습니다."));
 }

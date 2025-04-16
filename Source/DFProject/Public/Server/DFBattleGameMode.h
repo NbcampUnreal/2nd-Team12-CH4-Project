@@ -84,4 +84,11 @@ protected:
 
     // 안전하게 게임 상태를 변경하는 내부 함수 (변경 시 이벤트도 발생)
     virtual void SetGameState(EBattleGameState NewState);
+
+    // 게임 상태를 InProgress로 전환하는 함수
+    UFUNCTION()
+    void SetGameStateToInProgress();
+
+    // 타이머 핸들 (3초 딜레이용)
+    FTimerHandle DelayTimerHandle;
 };
