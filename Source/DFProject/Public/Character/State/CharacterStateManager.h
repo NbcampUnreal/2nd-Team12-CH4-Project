@@ -7,6 +7,7 @@
 #include "CharacterStateManager.generated.h"
 
 
+enum class ECharacterStateType : uint8;
 class UCharacterStateBase;
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
@@ -16,13 +17,24 @@ class DFPROJECT_API UCharacterStateManager : public UActorComponent
 
 public:	
 	UCharacterStateManager();
+	
+	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 
-public:	
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 	UFUNCTION(BlueprintCallable)
 	void SetState(UCharacterStateBase* NewState);
 
+	UFUNCTION(BlueprintCallable)
+	bool IsCurrentState(ECharacterStateType StateType) const;
+
+	UPROPERTY(ReplicatedUsing= OnRep_StateType)
+	ECharacterStateType CurrentStateType;
+	
 	UPROPERTY(BlueprintReadOnly)
 	TObjectPtr<UCharacterStateBase> CurrentState;
+
+protected:
+	UFUNCTION()
+	void OnRep_StateType();
 };

@@ -3,11 +3,9 @@
 
 #include "Character/BodyPart/BodyPart.h"
 
-#include "Ability/Strategy/AbilityStrategy.h"
 #include "Character/BodyPart/AttachInfoComponent.h"
 #include "Components/SphereComponent.h"
 #include "GameFramework/Character.h"
-#include "Kismet/GameplayStatics.h"
 #include "PhysicsEngine/PhysicsConstraintComponent.h"
 
 // Sets default values
@@ -28,6 +26,8 @@ ABodyPart::ABodyPart()
 
 	SetReplicates(true);
 	SetReplicateMovement(true);
+	BodyCollider->SetIsReplicated(true);
+	BoneConstraint->SetIsReplicated(true);
 }
 
 // Called when the game starts or when spawned
@@ -51,7 +51,7 @@ void ABodyPart::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 void ABodyPart::Attach_Implementation(ACharacter* TargetCharacter, const UAttachInfoComponent* AttachInfo)
 {
-	if (!TargetCharacter) return;
+	if (!TargetCharacter || !AttachInfo || !TargetCharacter->GetMesh()) return;
 	
 	SetOwner(TargetCharacter);
 	OwningCharacter = TargetCharacter; // 그냥 Owner로 할까 고민
@@ -155,5 +155,10 @@ void ABodyPart::OnGrabReleasedBy_Implementation(AActor* Grabber)
 UPrimitiveComponent* ABodyPart::GetRoot_Implementation()
 {
 	return BodyCollider;
+}
+
+void ABodyPart::Multicast_AddImpulse_Implementation(const FVector& Impulse)
+{
+	BodyCollider->AddImpulse(Impulse, NAME_None, true);
 }
 

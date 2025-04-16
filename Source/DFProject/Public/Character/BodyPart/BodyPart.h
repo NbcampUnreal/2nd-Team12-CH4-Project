@@ -59,6 +59,8 @@ public:
 	
 	virtual UPrimitiveComponent* GetRoot_Implementation() override;
 
+	UFUNCTION(BlueprintCallable, NetMulticast, Reliable, Category="BodyPart")
+	void Multicast_AddImpulse(const FVector& Impulse);
 protected:	
 	FTransform GetOffsetTransform(const ACharacter* TargetCharacter, const UAttachInfoComponent* AttachInfo);
 

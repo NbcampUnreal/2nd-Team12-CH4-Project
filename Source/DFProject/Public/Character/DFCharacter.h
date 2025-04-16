@@ -45,7 +45,25 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	UGravityMovementComponent* GetGravityMovementComponent();
+	
+	////// 캐릭터 세팅
+	UFUNCTION(BlueprintCallable, Category="Initialize")
+	void ReadyToPlay();
 
+	UFUNCTION(NetMulticast, Reliable, BlueprintCallable, Category="Initialize")
+	void Multicast_ReadyToPlay();
+	
+	UFUNCTION(BlueprintCallable, Category="PhysicalAnimation")
+	void SpawnBodyParts();
+	
+	UFUNCTION(BlueprintCallable, Category="PhysicalAnimation")
+	void ApplyPhysicalAnimationSettings();
+
+	void RegisterAbilities();
+
+	UFUNCTION(BlueprintCallable, Category="Respawn")
+	void Initialize();
+	///////
 	
 	UFUNCTION(BlueprintCallable)
 	void UpdateSpringArmOrientation();
@@ -67,7 +85,6 @@ public:
 	
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void Server_UseItem();
-	
 	
 	void StartSprint(const FInputActionValue& Value); //  CharacterMovement의 스피드 올리기 (이건 자동 리플), 달리기 이펙트 생성
 
@@ -97,22 +114,7 @@ public:
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void Server_Headbutt();
 	///////
-
 	
-	////// 캐릭터 세팅
-	UFUNCTION(BlueprintCallable, Category="PhysicalAnimation")
-	void SpawnBodyParts();
-	
-	UFUNCTION(BlueprintCallable, Category="PhysicalAnimation")
-	void ApplyPhysicalAnimationSettings();
-
-	void RegisterAbilities();
-
-	UFUNCTION(BlueprintCallable, Category="Respawn")
-	void Initialize();
-	///////
-	
-
 	///// 스턴 관련 함수
 	UFUNCTION(BlueprintCallable, Category="PhysicalAnimation")
 	void Stun();
@@ -189,33 +191,43 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category=PhysicalAnimation)
 	FName PhysicalAnimStartBone = TEXT("Hips");
 
+	// 복제된 바디파츠를 클라가 직접 접근할 필요가 없기에 몰라도 된다.
+	// 바디파츠에 접근하는건 서버 로직에서만 해도 충분
 	UPROPERTY()
 	TMap<EBodyPartType, ABodyPart*> BodyParts;
 
+	// 바디 파츠 붙일 때 사용하는 변수. 클라는 복제된 값을 사용하기에 몰라도 된다.
 	UPROPERTY()
 	FTransform MeshOffset;
 
 	bool bLeft = true;
 
 	float MaxHP = 100.0f;
+	// 체력바 없으면 복제할 필요가 있을까?
 	float HP = 100.0f;
 
+	// 서버만 가져도 됨. 기절 회복 로직은 서버가 가지면 되기에 클라는 이 변수들을 몰라도 됌
 	FTimerHandle RecoverTimer;
 	int32 RecoverInputCount = 0;
 	int32 RecoverInputGoal = 0;
 
+	// 잡기 로직도 서버에서만 실행해도 될 듯.
+	// 손을 움직일 때 body parts에 force를 주는 멀티 캐스트 함수만 있으면 될 것
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<UGrabComponent> RightGrabComp;
 	
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<UGrabComponent> LeftGrabComp;
-	
+
+	// 현재 상태에 따라 플레이어의 이동을 수정하기
+	// CharacterMovementComp를 건드니 서버만 가지고 있는게 좋을 듯
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<UMovementModifierComponent> MovementModifier;
 
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<UAbilityStrategyManager> AbilityManager;
-	
+
+	// 아직 상태에 따라 이펙트나 ui를 보여주지 않으니 서버용으로 사용 (클라는 모르도록)
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<UCharacterStateManager> StateManager;
 };

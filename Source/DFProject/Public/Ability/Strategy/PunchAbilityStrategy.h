@@ -16,10 +16,4 @@ class DFPROJECT_API UPunchAbilityStrategy : public UBodyPartAbilityStrategy
 public:
 	UPunchAbilityStrategy();
 	virtual void ActivateAbility_Implementation(AActor* TargetActor) override;
-	virtual void EndAbility_Implementation(AActor* TargetActor) override;
 };
-
-inline void UPunchAbilityStrategy::EndAbility_Implementation(AActor* TargetActor)
-{
-	Super::EndAbility_Implementation(TargetActor);
-}

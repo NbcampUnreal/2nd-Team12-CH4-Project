@@ -17,6 +17,6 @@ UHeadbuttAbilityStrategy::UHeadbuttAbilityStrategy()
 
 void UHeadbuttAbilityStrategy::ActivateAbility_Implementation(AActor* TargetActor)
 {
-	FVector ImpulseDirection = BodyPartOwner->GetActorForwardVector() * ImpulsePower; // 방향도 매개변수로 받을까 고민
-	OwningBodyPart->GetBodyCollider()->AddImpulse(ImpulseDirection, NAME_None, true);
+	FVector Impulse = BodyPartOwner->GetActorForwardVector() * ImpulsePower; // 방향도 매개변수로 받을까 고민
+	OwningBodyPart->Multicast_AddImpulse(Impulse);
 }

@@ -16,6 +16,6 @@ UPunchAbilityStrategy::UPunchAbilityStrategy()
 
 void UPunchAbilityStrategy::ActivateAbility_Implementation(AActor* TargetActor)
 {
-	FVector ImpulseDirection = BodyPartOwner->GetActorForwardVector() * ImpulsePower;
-	OwningBodyPart->GetBodyCollider()->AddImpulse(ImpulseDirection, NAME_None, true);
+	FVector Impulse = BodyPartOwner->GetActorForwardVector() * ImpulsePower;
+	OwningBodyPart->Multicast_AddImpulse(Impulse);
 }

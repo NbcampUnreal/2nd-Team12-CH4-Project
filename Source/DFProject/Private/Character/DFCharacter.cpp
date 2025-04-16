@@ -66,33 +66,15 @@ void ADFCharacter::BeginPlay()
 	Super::BeginPlay();
 
 	UE_LOG(LogTemp, Warning, TEXT("Current MovementComponent: %s"), *GetCharacterMovement()->GetClass()->GetName());
-	UpdateSpringArmOrientation();
-	GetMesh()->bPauseAnims = true;
+	//UpdateSpringArmOrientation();
 	MeshOffset = GetMesh()->GetRelativeTransform();
-	StateManager->SetState(NewObject<UIdleState>(this));
 
-	ApplyPhysicalAnimationSettings();
-	RegisterAbilities();
+	GetMesh()->bPauseAnims = true;
 }
 
 void ADFCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	//UpdateSpringArmOrientation();
-}
-
-void ADFCharacter::UpdateSpringArmOrientation()
-{
-	if (!SpringArm) return;
-
-	const FVector CharacterUp = GetActorUpVector();
-	const FVector CameraForward = FRotationMatrix(FRotator(0.f, SpringYaw, 0.f)).GetUnitAxis(EAxis::X);
-	const FVector AdjustedForward = FVector::VectorPlaneProject(CameraForward, CharacterUp).GetSafeNormal();
-
-	const FRotator CameraRot = FRotationMatrix::MakeFromXZ(AdjustedForward, CharacterUp).Rotator();
-	const FRotator FinalRot = CameraRot + FRotator(-25.f, 0.f, 0.f);
-
-	SpringArm->SetWorldRotation(FinalRot);
 }
 
 void ADFCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -192,7 +174,7 @@ bool ADFCharacter::EventOnDestroy()
 	if (RightGrabComp) RightGrabComp->Released();
 	if (LeftGrabComp) LeftGrabComp->Released();
 	
-	return MovementModifier->UnregisterAll();;
+	return MovementModifier->UnregisterAll();
 }
 
 UGravityMovementComponent* ADFCharacter::GetGravityMovementComponent()
@@ -200,11 +182,115 @@ UGravityMovementComponent* ADFCharacter::GetGravityMovementComponent()
 	return Cast<UGravityMovementComponent>(GetMovementComponent());
 }
 
+void ADFCharacter::ReadyToPlay()
+{
+	RegisterAbilities();
+	SpawnBodyParts();
+	Multicast_ReadyToPlay();
+}
+
+void ADFCharacter::Multicast_ReadyToPlay_Implementation()
+{
+	ApplyPhysicalAnimationSettings();
+	GetMesh()->bPauseAnims = false;
+	StateManager->SetState(NewObject<UIdleState>(this));
+}
+
+void ADFCharacter::SpawnBodyParts()
+{
+	if (!HasAuthority()) return; //서버에선 바디파츠 생성. 바디파츠는 복제됨
+	
+	TArray<UAttachInfoComponent*> AttachInfos;
+	GetComponents<UAttachInfoComponent>(AttachInfos);
+
+	for (UAttachInfoComponent* Info : AttachInfos)
+	{
+		if (!Info || !IsValid(Info->BodyPartClass) || !Info->bAutoSpawnBeginPlay) continue;
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.Owner = this;
+		SpawnParams.Instigator = GetInstigator();
+	
+		ABodyPart* SpawnedPart = GetWorld()->SpawnActor<ABodyPart>(Info->BodyPartClass);
+		if (!SpawnedPart) continue;
+
+		SpawnedPart->SetReplicates(true);
+		SpawnedPart->Attach(this, Info);
+
+		BodyParts.Add(Info->BodyPartType, SpawnedPart);
+	}
+
+	if (LeftGrabComp && BodyParts.Contains(EBodyPartType::LeftFist))
+	{
+		UBodyPartGrabHandler* LeftHandler = NewObject<UBodyPartGrabHandler>();
+		LeftHandler->SetOwningGrabComponent(LeftGrabComp);
+		LeftHandler->Initialize(BodyParts[EBodyPartType::LeftFist]);
+		LeftGrabComp->SetGrabHandler(LeftHandler);
+	}
+	else
+	{
+		UE_LOG(LogInitialize, Warning, TEXT("Grab Components not initialized."));
+	}
+
+	// 오른손 핸들러 생성 및 연결
+	if (RightGrabComp && BodyParts.Contains(EBodyPartType::RightFist))
+	{
+		UBodyPartGrabHandler* RightHandler = NewObject<UBodyPartGrabHandler>();
+		RightHandler->SetOwningGrabComponent(RightGrabComp);
+		RightHandler->Initialize(BodyParts[EBodyPartType::RightFist]);
+		RightGrabComp->SetGrabHandler(RightHandler);
+	}
+	else
+	{
+		UE_LOG(LogInitialize, Warning, TEXT("Grab Components not initialized."));
+	}
+}
+
+void ADFCharacter::ApplyPhysicalAnimationSettings()
+{
+	if (!PhysicalAnimComp || !GetMesh()) return;
+	
+	PhysicalAnimComp->SetSkeletalMeshComponent(GetMesh());
+	PhysicalAnimComp->ApplyPhysicalAnimationSettingsBelow(PhysicalAnimStartBone, PhysicalAnimData, false);
+	GetMesh()->SetAllBodiesBelowSimulatePhysics(PhysicalAnimStartBone, true, false);
+}
+
+void ADFCharacter::RegisterAbilities()
+{
+	AbilityManager->ClearAllAbilities();
+	AbilityManager->InitializeAbilities();
+}
+
+void ADFCharacter::UpdateSpringArmOrientation()
+{
+	if (!SpringArm) return;
+
+	const FVector CharacterUp = GetActorUpVector();
+	const FVector CameraForward = FRotationMatrix(FRotator(0.f, SpringYaw, 0.f)).GetUnitAxis(EAxis::X);
+	const FVector AdjustedForward = FVector::VectorPlaneProject(CameraForward, CharacterUp).GetSafeNormal();
+
+	const FRotator CameraRot = FRotationMatrix::MakeFromXZ(AdjustedForward, CharacterUp).Rotator();
+	const FRotator FinalRot = CameraRot + FRotator(-25.f, 0.f, 0.f);
+
+	SpringArm->SetWorldRotation(FinalRot);
+}
+
+void ADFCharacter::Initialize()
+{
+	RegisterAbilities();
+	
+	HP = MaxHP;
+
+	LeftGrabComp->Released();
+	RightGrabComp->Released();
+	
+	StateManager->SetState(NewObject<UIdleState>(this));
+}
+
 void ADFCharacter::Move(const FInputActionValue& Value)
 {
-	if (StateManager->CurrentState->GetStateType() == ECharacterStateType::Stunned) return;
-	const FVector2D MoveValue = Value.Get<FVector2D>();
+	if (StateManager->IsCurrentState(ECharacterStateType::Stunned)) return;
 	
+	const FVector2D MoveValue = Value.Get<FVector2D>();
 	// 카메라의 현재 Yaw(좌우) 회전 값을 기준으로 이동 방향 설정
 	const FRotator CameraRotation = Camera->GetComponentRotation();
 	const FRotator MovementRotation(0.f, CameraRotation.Yaw, 0.0f);
@@ -234,7 +320,7 @@ void ADFCharacter::Move(const FInputActionValue& Value)
 		SetActorRotation(NewRotation);
 		// CharacterMovementComponent는 Replication 지원해서 AddMovementInput으로
 		AddMovementInput(MovementDirection.GetSafeNormal());
-		//UpdateSpringArmOrientation();
+
 		if (!HasAuthority()) Server_Move(NewRotation); //클라면 서버에게 요청
 		else Multicast_Move(NewRotation);  // 서버(리슨서버 주인)이면 바로 멀티캐스트 
 	}
@@ -359,7 +445,7 @@ void ADFCharacter::Headbutt(const FInputActionValue& Value)
 
 void ADFCharacter::Server_Headbutt_Implementation()
 {
-	if (StateManager->CurrentState->GetStateType() == ECharacterStateType::Stunned) return;
+	if (StateManager->IsCurrentState(ECharacterStateType::Stunned)) return;
 	
 	if (!BodyParts.Contains(EBodyPartType::Head) || !BodyParts[EBodyPartType::Head]) return;
 	
@@ -374,58 +460,6 @@ void ADFCharacter::StartJump(const FInputActionValue& Value)
 		RecoverHandleInput(); // 연타 처리 함수
 	}
 	else Super::Jump();
-}
-
-void ADFCharacter::SpawnBodyParts()
-{
-	if (HasAuthority()) //서버에선 바디파츠 생성. 바디파츠는 복제됨
-	{
-		TArray<UAttachInfoComponent*> AttachInfos;
-		GetComponents<UAttachInfoComponent>(AttachInfos);
-
-		for (UAttachInfoComponent* Info : AttachInfos)
-		{
-			if (!Info || !IsValid(Info->BodyPartClass) || !Info->bAutoSpawnBeginPlay) continue;
-			FActorSpawnParameters SpawnParams;
-			SpawnParams.Owner = this;
-			SpawnParams.Instigator = GetInstigator();
-		
-			ABodyPart* SpawnedPart = GetWorld()->SpawnActor<ABodyPart>(Info->BodyPartClass);
-			if (!SpawnedPart) continue;
-
-			SpawnedPart->SetReplicates(true);
-			SpawnedPart->Attach(this, Info);
-
-			BodyParts.Add(Info->BodyPartType, SpawnedPart);
-		}
-
-		if (LeftGrabComp && BodyParts.Contains(EBodyPartType::LeftFist))
-		{
-			UBodyPartGrabHandler* LeftHandler = NewObject<UBodyPartGrabHandler>();
-			LeftHandler->SetOwningGrabComponent(LeftGrabComp);
-			LeftHandler->Initialize(BodyParts[EBodyPartType::LeftFist]);
-			LeftGrabComp->SetGrabHandler(LeftHandler);
-		}
-		else
-		{
-			UE_LOG(LogInitialize, Warning, TEXT("Grab Components not initialized."));
-		}
-
-		// 오른손 핸들러 생성 및 연결
-		if (RightGrabComp && BodyParts.Contains(EBodyPartType::RightFist))
-		{
-			UBodyPartGrabHandler* RightHandler = NewObject<UBodyPartGrabHandler>();
-			RightHandler->SetOwningGrabComponent(RightGrabComp);
-			RightHandler->Initialize(BodyParts[EBodyPartType::RightFist]);
-			RightGrabComp->SetGrabHandler(RightHandler);
-		}
-		else
-		{
-			UE_LOG(LogInitialize, Warning, TEXT("Grab Components not initialized."));
-		}
-	}
-	
-	GetMesh()->bPauseAnims = false; // 클라는 애니메이션 재생 시작
 }
 
 void ADFCharacter::BasicAttack(const FInputActionValue& Value)
@@ -451,44 +485,15 @@ void ADFCharacter::Server_Punch_Implementation()
 	bLeft = !bLeft;	
 }
 
-
 void ADFCharacter::Server_UseItem_Implementation()
 {
-	if (StateManager->CurrentState->GetStateType() != ECharacterStateType::Grabbed) return;
+	if (StateManager->IsCurrentState(ECharacterStateType::Grabbed)) return;
 
 	AActor* GrabActor = RightGrabComp->GetGrabTargetActor();
 	if (!GrabActor) return;
 	
 	AbilityManager->StartAbility("UseItem", this);
 	IGrabbable::Execute_Use(GrabActor);
-}
-
-
-void ADFCharacter::ApplyPhysicalAnimationSettings()
-{
-	if (!PhysicalAnimComp || !GetMesh()) return;
-	
-	PhysicalAnimComp->SetSkeletalMeshComponent(GetMesh());
-	PhysicalAnimComp->ApplyPhysicalAnimationSettingsBelow(PhysicalAnimStartBone, PhysicalAnimData, false);
-	GetMesh()->SetAllBodiesBelowSimulatePhysics(PhysicalAnimStartBone, true, false);
-}
-
-void ADFCharacter::RegisterAbilities()
-{
-	AbilityManager->ClearAllAbilities();
-	AbilityManager->InitializeAbilities();
-}
-
-void ADFCharacter::Initialize()
-{
-	RegisterAbilities();
-	
-	HP = MaxHP;
-
-	LeftGrabComp->Released();
-	RightGrabComp->Released();
-	
-	StateManager->SetState(NewObject<UIdleState>(this));
 }
 
 void ADFCharacter::Stun()
@@ -526,14 +531,14 @@ void ADFCharacter::RecoverHandleInput()
 
 void ADFCharacter::SetAllBonesMass(float InMass)
 {
-	TArray<FName> BoneNames;
-	GetMesh()->GetBoneNames(BoneNames);
-	for (auto& Name : BoneNames)
-	{
-		float Mass = GetMesh()->GetBoneMass(Name);
-		GetMesh()->SetMassOverrideInKg(Name, InMass, true);
-		UE_LOG(LogInitialize, Log, TEXT("Bone %s Mass: %.2f"), *Name.ToString(), Mass);
-	}
+	//TArray<FName> BoneNames;
+	//GetMesh()->GetBoneNames(BoneNames);
+	//for (auto& Name : BoneNames)
+	//{
+	//	float Mass = GetMesh()->GetBoneMass(Name);
+	//	GetMesh()->SetMassOverrideInKg(Name, InMass, true);
+	//	UE_LOG(LogInitialize, Log, TEXT("Bone %s Mass: %.2f"), *Name.ToString(), Mass);
+	//}
 }
 
 float ADFCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator,
