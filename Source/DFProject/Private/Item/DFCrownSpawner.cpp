@@ -1,12 +1,20 @@
 #include "Item/DFCrownSpawner.h"
 #include "Item/DFCrownActor.h"
 #include "Item/DFWearableItem.h"
+#include "Components/BoxComponent.h"
 #include "Engine/TargetPoint.h"
 #include "Kismet/GameplayStatics.h"
 
 ADFCrownSpawner::ADFCrownSpawner()
 {
 	PrimaryActorTick.bCanEverTick = false;
+
+	Scene = CreateDefaultSubobject<USceneComponent>(TEXT("RootComponent"));
+	SetRootComponent(Scene);
+
+	SpawnArea = CreateDefaultSubobject<UBoxComponent>(TEXT("SpawnArea"));
+	SpawnArea->SetupAttachment(Scene);
+	SpawnArea->SetBoxExtent(FVector(50.0f, 50.0f, 10.0f));
 }
 
 void ADFCrownSpawner::BeginPlay()
@@ -16,20 +24,16 @@ void ADFCrownSpawner::BeginPlay()
 
 void ADFCrownSpawner::SpawnCrown()
 {
-	TArray<AActor*> SpawnPoints;
+	FVector BoxExtent = SpawnArea->GetScaledBoxExtent();
 
-	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ATargetPoint::StaticClass(), SpawnPoints);
+	FVector BoxLocation = SpawnArea->GetComponentLocation();
 
-	if (SpawnPoints.Num() == 0)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("타깃포인트 없음"));
-		return;
-	}
+	FVector SpawnLocation = BoxLocation + FVector(
+		FMath::FRandRange(-BoxExtent.X, BoxExtent.X),
+		FMath::FRandRange(-BoxExtent.Y, BoxExtent.Y),
+		BoxExtent.Z
+	);
 
-	int32 RandIndex = FMath::RandRange(0, SpawnPoints.Num() - 1);
-
-	FVector SpawnLocation = SpawnPoints[RandIndex]->GetActorLocation();
-
-	ADFCrownActor* Crown = GetWorld()->SpawnActor<ADFCrownActor>(CrownActor, SpawnLocation, FRotator::ZeroRotator);
+	Crown = GetWorld()->SpawnActor<ADFCrownActor>(CrownActor, SpawnLocation, FRotator::ZeroRotator);
 
 }

@@ -36,7 +36,7 @@ public:
 
 
 	UFUNCTION()
-	void OnGripAreaBeginOverlap(
+	virtual void OnGripAreaBeginOverlap(
 		UPrimitiveComponent* OverlappedComponent,
 		AActor* OtherActor,
 		UPrimitiveComponent* OtherComp,
@@ -45,7 +45,7 @@ public:
 		const FHitResult& SweepResult);
 
 	UFUNCTION()
-	void OnGripAreaEndOverlap(
+	virtual void OnGripAreaEndOverlap(
 		UPrimitiveComponent* OverlappedComponent,
 		AActor* OtherActor,
 		UPrimitiveComponent* OtherComp,
