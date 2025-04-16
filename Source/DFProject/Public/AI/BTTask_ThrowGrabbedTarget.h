@@ -17,17 +17,29 @@ class DFPROJECT_API UBTTask_ThrowGrabbedTarget : public UBTTaskNode
 public:
 	UBTTask_ThrowGrabbedTarget();
 
-protected:
 	virtual EBTNodeResult::Type ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) override;
 
+protected:
+	// 블랙보드 키
 	UPROPERTY(EditAnywhere, Category = "Blackboard")
 	FName GrabTargetActorKey;
 
 	UPROPERTY(EditAnywhere, Category = "Blackboard")
 	FName DangerDirectionKey;
 
+	// 던지는 힘
 	UPROPERTY(EditAnywhere, Category = "Throw")
 	float ThrowPower;
+
+	// ✅ 딜레이 시간 (초)
+	UPROPERTY(EditAnywhere, Category = "Throw")
+	float ThrowDelay;
+
+	FTimerHandle DelayHandle;
+
+	// 던지기 실행 함수
+	UFUNCTION()
+	void DelayedThrow(UBehaviorTreeComponent* OwnerComp);
 
 	
 };

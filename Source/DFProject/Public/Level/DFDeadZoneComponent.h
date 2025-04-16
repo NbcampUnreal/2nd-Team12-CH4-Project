@@ -4,6 +4,8 @@
 #include "Components/StaticMeshComponent.h"
 #include "DFDeadZoneComponent.generated.h"
 
+class UNavModifierComponent;
+
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class DFPROJECT_API UDFDeadZoneComponent : public UStaticMeshComponent
 {
@@ -20,4 +22,7 @@ protected:
     void OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
         UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,
         bool bFromSweep, const FHitResult& SweepResult);
+
+    UPROPERTY()
+    UNavModifierComponent* NavModifierComp;
 };

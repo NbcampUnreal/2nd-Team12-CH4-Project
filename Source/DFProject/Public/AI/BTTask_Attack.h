@@ -13,16 +13,9 @@ class DFPROJECT_API UBTTask_Attack : public UBTTaskNode
 public:
 	UBTTask_Attack();
 
-	virtual EBTNodeResult::Type ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) override;
-	virtual void TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds) override;
-
 protected:
-	UPROPERTY(EditAnywhere, Category = "Blackboard")
-	FName SelectedAttackTypeKey;
+	virtual EBTNodeResult::Type ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) override;
 
 private:
-	int32 CurrentPunchCount;
-	float PunchInterval;
-	float ElapsedTime;
-	bool bIsPunching;
+	FName SelectedAttackTypeKey;
 };

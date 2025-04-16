@@ -7,18 +7,14 @@
 #include "DFProject.h"
 
 UBTService_AttackManager::UBTService_AttackManager()
-	: PunchCooldown(0.5f)
-	, HeadbuttCooldown(3.0f)
-	, PunchRange(200.f)
-	, HeadbuttRange(400.f)
-	, LastPunchTime(-999.f)
-	, LastHeadbuttTime(-999.f)
 {
 	NodeName = TEXT("AttackManager");
 	Interval = 0.1f;
 
 	TargetKey = TEXT("TargetActor");
 	SelectedAttackTypeKey = TEXT("AttackType");
+
+	LastAttackType = 0;
 }
 
 void UBTService_AttackManager::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds)
@@ -39,36 +35,15 @@ void UBTService_AttackManager::TickNode(UBehaviorTreeComponent& OwnerComp, uint8
 		return;
 	}
 
-	const float Distance = FVector::Dist(MyCharacter->GetActorLocation(), Target->GetActorLocation());
-	const float TimeNow = MyCharacter->GetWorld()->GetTimeSeconds();
-
-	TArray<TPair<uint8, float>> Candidates;
-
-	if (Distance <= PunchRange && TimeNow - LastPunchTime >= PunchCooldown)
+	// 첫 시도는 Headbutt → 실패하면 다음에 Punch 
+	if (LastAttackType == 2)
 	{
-		Candidates.Add({ 1, PunchRange });
-	}
-	if (Distance <= HeadbuttRange && TimeNow - LastHeadbuttTime >= HeadbuttCooldown)
-	{
-		Candidates.Add({ 2, HeadbuttRange });
-	}
-
-	if (Candidates.Num() > 0)
-	{
-		Candidates.Sort([](const TPair<uint8, float>& A, const TPair<uint8, float>& B)
-			{
-				return A.Value > B.Value;
-			});
-
-		uint8 Selected = Candidates[0].Key;
-
-		if (Selected == 1) LastPunchTime = TimeNow;
-		else if (Selected == 2) LastHeadbuttTime = TimeNow;
-
-		BlackboardComp->SetValueAsEnum(SelectedAttackTypeKey, Selected);
+		BlackboardComp->SetValueAsEnum(SelectedAttackTypeKey, 1);
+		LastAttackType = 1;
 	}
 	else
 	{
-		BlackboardComp->SetValueAsEnum(SelectedAttackTypeKey, 0); // None
+		BlackboardComp->SetValueAsEnum(SelectedAttackTypeKey, 2);
+		LastAttackType = 2;
 	}
 }

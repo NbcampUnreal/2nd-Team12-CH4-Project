@@ -17,29 +17,13 @@ class DFPROJECT_API UBTService_AttackManager : public UBTService
 public:
 	UBTService_AttackManager();
 
+protected:
 	virtual void TickNode(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds) override;
 
-protected:
-	UPROPERTY(EditAnywhere, Category = "Blackboard")
+private:
 	FName TargetKey;
-
-	UPROPERTY(EditAnywhere, Category = "Blackboard")
 	FName SelectedAttackTypeKey;
 
-	UPROPERTY(EditAnywhere, Category = "Blackboard")
-	float PunchCooldown;
+	uint8 LastAttackType;
 
-	UPROPERTY(EditAnywhere, Category = "Blackboard")
-	float HeadbuttCooldown;
-
-	UPROPERTY(EditAnywhere, Category = "AttackRange")
-	float PunchRange;
-
-	UPROPERTY(EditAnywhere, Category = "AttackRange")
-	float HeadbuttRange;
-
-private:
-	float LastPunchTime;
-	float LastHeadbuttTime;
-	
 };

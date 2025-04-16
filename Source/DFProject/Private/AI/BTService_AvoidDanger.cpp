@@ -93,7 +93,7 @@ void UBTService_AvoidDanger::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* 
 
 		const float DeadZoneRadius = 100.f;
 		const float SafeMargin = 200.f;
-		const float FinalAvoidDistance = AvoidDistance * 2.f + DeadZoneRadius + SafeMargin;
+		const float FinalAvoidDistance = 500.f; //AvoidDistance * 2.f + DeadZoneRadius + SafeMargin;
 
 		const FVector RawAvoidLoc = MyLocation + AvoidDir * FinalAvoidDistance;
 

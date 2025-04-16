@@ -2,12 +2,19 @@
 #include "Kismet/GameplayStatics.h"
 #include "Server/DFBattleGameMode.h"
 #include "GameFramework/Pawn.h"
+#include "NavModifierComponent.h"
+#include "NavigationSystem.h"
+#include "NavAreas/NavArea_Null.h"
 
 UDFDeadZoneComponent::UDFDeadZoneComponent()
 {
     SetCollisionEnabled(ECollisionEnabled::QueryOnly);
     SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Overlap);
     SetGenerateOverlapEvents(true);
+
+    NavModifierComp = CreateDefaultSubobject<UNavModifierComponent>(TEXT("NavBlocker"));
+    NavModifierComp->SetAreaClass(UNavArea_Null::StaticClass());
+    
 }
 
 void UDFDeadZoneComponent::BeginPlay()
