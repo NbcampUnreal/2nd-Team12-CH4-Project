@@ -12,51 +12,71 @@ class DFPROJECT_API ADFTimeOutGameMode : public ADFBattleGameMode
 public:
 	ADFTimeOutGameMode();
 
-	// 타임아웃 지속 시간 (초)
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Game Settings")
-	float TimeoutDuration;
+    // 게임 시작 시 초기화
+    virtual void BeginPlay() override;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Game Settings")
-	float RespawnDelay;
+    // 매 프레임 호출되는 Tick 함수에서 타임아웃 여부 체크
+    virtual void Tick(float DeltaSeconds) override;
 
-	// 타임아웃 여부를 반환하는 함수
-	UFUNCTION(BlueprintCallable, Category = "GameMode")
-	bool HasTimedOut() const;
+    virtual void EndGame() override;
 
-	// 게임 시작 시간 (BeginPlay()에서 설정)
-	float GameStartTime;
+    virtual void HandlePlayerOutOfBounds(APawn* Pawn) override;
 
-	// 모드 선택: 자유전 또는 팀전
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "GameMode")
-	EBattleModeType BattleMode;
+    // Timeout 관련 변수
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Timeout")
+    float TimeoutDuration;  // 예: 180초
 
-	// 플레이어가 장외 상태일 때 호출되는 함수 재정의 (리스폰 방식으로 변경)
-	virtual void HandlePlayerOutOfBounds(APawn* Pawn) override;
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Timeout")
+    float RespawnDelay;     // 예: 5초
 
-	// 팀전 모드용 팀 점수
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Team")
-	int32 Team1Score;
+    UFUNCTION(BlueprintCallable, Category = "Timeout")
+    bool HasTimedOut() const;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Team")
-	int32 Team2Score;
+    // Battle 모드 선택: 팀전/자유전
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "GameMode")
+    EBattleModeType BattleMode;
 
-protected:
-	// 게임 시작 시 초기화
-	virtual void BeginPlay() override;
+    /////////////////////////////////////////////////////////
+    // 팀전 모드 관련 변수
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Team")
+    int32 Team1Score;
 
-	// 매 프레임 호출되는 Tick 함수에서 타임아웃 여부 체크
-	virtual void Tick(float DeltaSeconds) override;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Team")
+    int32 Team2Score;
 
-	virtual void EndGame() override;
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Team")
+    float TeamScoreUpdateInterval;
+
+    /////////////////////////////////////////////////////////
+    // 자유전 모드 관련 변수
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "FreeMode")
+    float FreeScoreUpdateInterval;
+
+    /////////////////////////////////////////////////////////
+    // Sudden Death 모드 관련 변수
+    // bSuddenDeath가 true이면 추가 시간이 무제한으로 주어지며, 이후 점수 차이가 발생하면 승리 결정
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "GameMode")
+    bool bSuddenDeath;
+
 
 private:
-	// 타임아웃 발생 시 호출되는 함수
-	void OnTimeout();
+    FTimerHandle TimeoutHandle;
+    FTimerHandle TeamScoreTimerHandle;
+    FTimerHandle FreeScoreTimerHandle;
 
-	FTimerHandle TimeoutHandle;
+    // Timeout 발생 시 호출되는 함수
+    void OnTimeout();
 
-	// 헤더(ADFTimeOutGameMode.h) private 영역에 추가:
-	void RespawnPlayer(AController* Controller, APawn* PawnToRespawn);
+    // 팀전 모드 관련 함수
+    void UpdateTeamScores();
+    void CheckTeamWinningCondition();
+
+    // 자유전 모드 관련 함수
+    void UpdateCrownScores();
+    void CheckFreeWinningCondition();
+
+    // 리스폰 함수
+    void RespawnPlayer(AController* Controller, APawn* PawnToRespawn);
 
 
 };
