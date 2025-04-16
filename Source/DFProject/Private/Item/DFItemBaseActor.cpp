@@ -2,6 +2,7 @@
 #include "Item/DFItemInstance.h"
 #include "Item/DFBattleItem.h"
 #include "Item/DFItemAbilityComponent.h"
+#include "Character/BodyPart/AttachInfoComponent.h"
 #include "Components/SphereComponent.h"
 #include "PhysicsEngine/PhysicalAnimationComponent.h"
 
@@ -40,17 +41,37 @@ void ADFItemBaseActor::SetupItem(UDFItemInstance* NewInstance)
 {
 	if (NewInstance && NewInstance->ItemData->ItemMesh)
 	{		
-	ItemInstance = NewInstance;
-	ItemMesh->SetSkeletalMesh(NewInstance->ItemData->ItemMesh);
-	ItemMesh->SetSimulatePhysics(true);
-	ItemMesh->SetAnimationMode(EAnimationMode::AnimationBlueprint);
-	ItemMesh->SetAnimInstanceClass(NewInstance->ItemData->AnimBP);
+		ItemInstance = NewInstance;
+		ItemMesh->SetSkeletalMesh(NewInstance->ItemData->ItemMesh);
+		ItemMesh->SetSimulatePhysics(true);
+		ItemMesh->SetAnimationMode(EAnimationMode::AnimationBlueprint);
+		ItemMesh->SetAnimInstanceClass(NewInstance->ItemData->AnimBP);
 
-	PhysicalAnimComp->SetSkeletalMeshComponent(ItemMesh);
+		if (NewInstance->ItemData->AssetType != FPrimaryAssetType("BattleItem"))
+		{
+			PhysicalAnimComp->DestroyComponent();
+			GripArea->DestroyComponent();
+			return;
+		}
 
-	GripArea->AttachToComponent(ItemMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("HandGripSocket"));
+		PhysicalAnimComp->SetSkeletalMeshComponent(ItemMesh);
 
-	AttachAbilities();
+		TArray<FName> SocketNames = ItemMesh->GetAllSocketNames();
+		if (SocketNames.Find(FName("HandGripSocket")))
+		{
+			GripArea->AttachToComponent(ItemMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("HandGripSocket"));
+		}
+
+		UAttachInfoComponent* AttachInfo = NewObject<UAttachInfoComponent>(this);
+		AttachInfo->RegisterComponent();
+
+
+		if (SocketNames.Find(FName("ColliderBoneSocket")))
+		{
+			AttachInfo->AttachToComponent(ItemMesh, FAttachmentTransformRules::SnapToTargetIncludingScale, FName("ColliderBoneSocket"));
+		}
+
+		AttachAbilities();
 	}	
 }
 
