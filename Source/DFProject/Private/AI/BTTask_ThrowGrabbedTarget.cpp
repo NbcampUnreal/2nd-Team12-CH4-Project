@@ -78,14 +78,26 @@ EBTNodeResult::Type UBTTask_ThrowGrabbedTarget::EvaluateAndAttemptThrow(ADFChara
 	const ECharacterStateType TargetState = TargetCharacter->StateManager->CurrentState->GetStateType();
 	if (TargetState != ECharacterStateType::Stunned)
 	{
-		//LOG_WARNING(TEXT("ThrowTask: 대상이 스턴 상태 또는 그랩 상태 아님 (현재 상태: %d) → 실패"), static_cast<int32>(TargetState));
 		MyCharacter->Server_ReleaseGrab(); 
 		return EBTNodeResult::Failed;
 	}
+	
+	MyCharacter->Jump();
 
 	MyCharacter->Server_ReleaseGrab();  
 
-	MyCharacter->Jump();
+
+	const FVector ThrowDirection = (TargetCharacter->GetActorLocation() - MyCharacter->GetActorLocation()).GetSafeNormal();
+	if (UPrimitiveComponent* Mesh = TargetCharacter->GetMesh())
+	{
+		Mesh->AddImpulse(ThrowDirection * ThrowPower, NAME_None, true);
+		LOG_WARNING(TEXT("ThrowTask: 던지기 성공 (Impulse 적용)"));
+	}
+	else
+	{
+		LOG_WARNING(TEXT("ThrowTask: 대상 Mesh 없음 → 던지기 실패"));
+		return EBTNodeResult::Failed;
+	}
 
 	return EBTNodeResult::Succeeded;
 }
