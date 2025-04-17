@@ -26,9 +26,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Item | ShopItemSpawner")
 	void SetActor(UDFWearableItem* ItemDataToShow);
 
-	UFUNCTION(BlueprintCallable, Category = "Item | ShopItemSpawner")
-	FText GetItemName() const;
+	//UFUNCTION(BlueprintCallable, Category = "Item | ShopItemSpawner")
+	virtual FText GetItemName() const override;
 
-	UFUNCTION(BlueprintCallable, Category = "Item | ShopItemSpawner")
-	int32 GetItemPrice() const;
+	//UFUNCTION(BlueprintCallable, Category = "Item | ShopItemSpawner")
+	virtual int32 GetItemPrice() const override;
 };

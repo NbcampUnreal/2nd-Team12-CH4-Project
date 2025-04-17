@@ -73,11 +73,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Item")
 	TSubclassOf<UAbilityStrategy> GetCharacterAbility() const;
 
-	//UFUNCTION(BlueprintCallable, Category = "Item")
-	//virtual FText GetItemName() const;
+	UFUNCTION(BlueprintCallable, Category = "Item")
+	virtual FText GetItemName() const;
 
-	//UFUNCTION(BlueprintCallable, Category = "Item")
-	//virtual int32 GetItemPrice() const;
+	UFUNCTION(BlueprintCallable, Category = "Item")
+	virtual int32 GetItemPrice() const;
 
 	virtual void SetupItem(const FItemInstanceData& InData);
 

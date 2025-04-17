@@ -16,6 +16,7 @@ ADFItemBaseActor::ADFItemBaseActor()
 	SetReplicateMovement(true);
 	PrimaryActorTick.bCanEverTick = false;
 
+
 	ItemMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("RootItemMesh"));
 	SetRootComponent(ItemMesh);
 
@@ -77,6 +78,7 @@ void ADFItemBaseActor::SetupItem(const FItemInstanceData& InData)
 	ItemMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	ItemMesh->SetCollisionResponseToChannel(ECC_Visibility, ECollisionResponse::ECR_Overlap);
 	ItemMesh->SetCollisionResponseToChannel(ECC_PhysicsBody, ECollisionResponse::ECR_Overlap);
+	ItemMesh->SetGenerateOverlapEvents(true);
 	ItemMesh->SetIsReplicated(true);
 	ItemMesh->SetSimulatePhysics(true);
 
@@ -168,12 +170,12 @@ TSubclassOf<UAbilityStrategy> ADFItemBaseActor::GetCharacterAbility() const
 	return OwnerCharacterAbility;
 }
 
-//FText ADFItemBaseActor::GetItemName() const
-//{
-//	return DataAssetInfo->DisplayItemName;
-//}
-//
-//int32 ADFItemBaseActor::GetItemPrice() const
-//{
-//	return DataAssetInfo->ItemPrice;
-//}
+FText ADFItemBaseActor::GetItemName() const
+{
+	return DataAssetInfo->DisplayItemName;
+}
+
+int32 ADFItemBaseActor::GetItemPrice() const
+{
+	return DataAssetInfo->ItemPrice;
+}
