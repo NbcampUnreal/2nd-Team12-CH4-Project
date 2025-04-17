@@ -17,19 +17,28 @@ UBTService_AttackManager::UBTService_AttackManager()
 
 void UBTService_AttackManager::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds)
 {
-	AAIController* AIController = OwnerComp.GetAIOwner();
-	if (!AIController) return;
+	ADFAIController* AIController = Cast<ADFAIController>(OwnerComp.GetAIOwner());
+	if (!AIController)
+	{
+		return;
+	}
 
 	ADFCharacter* MyCharacter = Cast<ADFCharacter>(AIController->GetPawn());
-	if (!MyCharacter) return;
+	if (!MyCharacter)
+	{
+		return;
+	}
 
 	UBlackboardComponent* BlackboardComp = OwnerComp.GetBlackboardComponent();
-	if (!BlackboardComp) return;
+	if (!BlackboardComp)
+	{
+		return;
+	}
 
 	AActor* Target = Cast<AActor>(BlackboardComp->GetValueAsObject(TargetKey));
 	BlackboardComp->SetValueAsBool(CanAttackKey, Target != nullptr);
 
-	LOG_WARNING(TEXT("[AttackManager] Target %s → CanAttack = %s"),
-		Target ? *Target->GetName() : TEXT("None"),
-		Target ? TEXT("true") : TEXT("false"));
+	//LOG_WARNING(TEXT("[AttackManager] Target %s → CanAttack = %s"),
+	//	Target ? *Target->GetName() : TEXT("None"),
+	//	Target ? TEXT("true") : TEXT("false"));
 }

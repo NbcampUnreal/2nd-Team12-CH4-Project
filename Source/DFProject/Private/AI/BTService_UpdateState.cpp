@@ -21,8 +21,11 @@ UBTService_UpdateState::UBTService_UpdateState()
 
 void UBTService_UpdateState::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds)
 {
-	AAIController* AIController = OwnerComp.GetAIOwner();
-	if (!AIController) return;
+	ADFAIController* AIController = Cast<ADFAIController>(OwnerComp.GetAIOwner());
+	if (!AIController)
+	{
+		return;
+	}
 
 	ADFCharacter* MyCharacter = Cast<ADFCharacter>(AIController->GetPawn());
 	if (!MyCharacter) return;

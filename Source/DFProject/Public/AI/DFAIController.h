@@ -29,6 +29,8 @@ public:
 	UFUNCTION(Server, Reliable, WithValidation)
 	void Server_SetAILevel(EAI_AILevels NewLevel);
 
+	EAI_AILevels GetAILevel() const;
+
 protected:
 	void BeginAI(APawn* InPawn);
 	void EndAI();
@@ -42,4 +44,6 @@ private:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI", Meta = (AllowPrivateAccess = "true"))
 	EAI_AILevels CurrentAILevel;
+
+
 };

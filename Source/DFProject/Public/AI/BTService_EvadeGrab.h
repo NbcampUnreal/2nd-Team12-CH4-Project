@@ -4,32 +4,35 @@
 
 #include "CoreMinimal.h"
 #include "BehaviorTree/BTService.h"
-#include "BTService_UpdateState.generated.h"
+#include "BTService_EvadeGrab.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class DFPROJECT_API UBTService_UpdateState : public UBTService
+class DFPROJECT_API UBTService_EvadeGrab : public UBTService
 {
 	GENERATED_BODY()
 
 public:
-	UBTService_UpdateState();
+	UBTService_EvadeGrab();
 
+protected:
 	virtual void TickNode(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds) override;
 
 private:
 	UPROPERTY(EditAnywhere, Category = "Blackboard")
-	FName TargetKey;
+	FName TargetActorKey;
 
 	UPROPERTY(EditAnywhere, Category = "Blackboard")
-	FName DistanceKey;
+	FName EvadeLocationKey;
 
 	UPROPERTY(EditAnywhere, Category = "Blackboard")
-	FName IsInAttackRangeKey;
+	FName IsEvadingKey;
 
-	UPROPERTY(EditAnywhere, Category = "Blackboard")
-	float AttackRange;
-	
+	UPROPERTY(EditAnywhere, Category = "Evade")
+	float EvadeDistance;
+
+	UPROPERTY(EditAnywhere, Category = "Evade")
+	float DetectRange;
 };

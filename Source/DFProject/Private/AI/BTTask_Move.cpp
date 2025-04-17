@@ -1,26 +1,25 @@
 #include "AI/BTTask_Move.h"
-#include "AIController.h"
+#include "AI/DFAIController.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "Character/DFCharacter.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "Level/DFDeadZoneComponent.h"
 #include "DFProject.h"
 
 UBTTask_Move::UBTTask_Move()
 {
 	NodeName = TEXT("Move");
-
 	bNotifyTick = true;
-
-	bWasFalling = false;
+	MoveLocationKey = TEXT("MoveLocation"); 
+	AttackRange = 500.f;
+	DefaultSpeed = 600.f;
 }
 
 EBTNodeResult::Type UBTTask_Move::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
 {
-	AAIController* AIController = OwnerComp.GetAIOwner();
+	ADFAIController* AIController = Cast<ADFAIController>(OwnerComp.GetAIOwner());
 	if (!AIController)
 	{
-		LOG_ERROR(TEXT("No AI Controller in MoveTask"));
+		LOG_ERROR(TEXT("No DFAIController in MoveTask"));
 		return EBTNodeResult::Failed;
 	}
 
@@ -38,31 +37,12 @@ EBTNodeResult::Type UBTTask_Move::ExecuteTask(UBehaviorTreeComponent& OwnerComp,
 		return EBTNodeResult::Failed;
 	}
 
-	AActor* Target = Cast<AActor>(BlackboardComp->GetValueAsObject(TEXT("TargetActor")));
-	if (!Target)
+	FName TargetKeyName = BlackboardComp->GetValueAsName(MoveLocationKey);
+	bool bHasLocation = BlackboardComp->IsVectorValueSet(TargetKeyName) || BlackboardComp->GetValueAsObject(TargetKeyName) != nullptr;
+	if (!bHasLocation)
 	{
-		LOG_WARNING(TEXT("No TargetActor in Blackboard."));
+		LOG_WARNING(TEXT("MoveTask: TargetKey (%s) has no valid value."), *TargetKeyName.ToString());
 		return EBTNodeResult::Failed;
-	}
-
-	if (ShouldJump(MyCharacter))
-	{
-		LOG(Log, TEXT("Find Obstacle. Start Jump."));
-
-		//FVector MoveDirection = (Target->GetActorLocation() - MyCharacter->GetActorLocation()).GetSafeNormal2D();
-
-		//MyCharacter->AddMovementInput(MoveDirection, 1.0f);
-
-		MyCharacter->Jump();
-
-		MyCharacter->GetCharacterMovement()->MaxWalkSpeed = 800.f;
-
-		BlackboardComp->SetValueAsBool(TEXT("ShouldJump"), true);
-		BlackboardComp->SetValueAsBool(TEXT("IsJumping"), true);
-	}
-	else
-	{
-		BlackboardComp->SetValueAsBool(TEXT("ShouldJump"), false);
 	}
 
 	return Super::ExecuteTask(OwnerComp, NodeMemory);
@@ -70,170 +50,92 @@ EBTNodeResult::Type UBTTask_Move::ExecuteTask(UBehaviorTreeComponent& OwnerComp,
 
 void UBTTask_Move::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds)
 {
-	AAIController* AIController = OwnerComp.GetAIOwner();
+	ADFAIController* AIController = Cast<ADFAIController>(OwnerComp.GetAIOwner());
 	if (!AIController)
 	{
-		LOG_ERROR(TEXT("No AIController in TickTask."));
 		return;
 	}
 
 	ADFCharacter* MyCharacter = Cast<ADFCharacter>(AIController->GetPawn());
 	if (!MyCharacter)
 	{
-		LOG_ERROR(TEXT("No DFCharacter in TickTask."));
 		return;
 	}
 
 	UBlackboardComponent* BlackboardComp = OwnerComp.GetBlackboardComponent();
 	if (!BlackboardComp)
 	{
-		LOG_ERROR(TEXT("No BlackboardComponent in TickTask."));
 		return;
 	}
 
-	AActor* TargetActor = Cast<AActor>(BlackboardComp->GetValueAsObject(TEXT("TargetActor")));
-	if (!TargetActor)
+	FName TargetKeyName = BlackboardComp->GetValueAsName(MoveLocationKey);
+	FVector TargetLocation = FVector::ZeroVector;
+
+	if (BlackboardComp->IsVectorValueSet(TargetKeyName))
 	{
-		LOG_ERROR(TEXT("No TargetActor in TickTask."));
-		return;
+		TargetLocation = BlackboardComp->GetValueAsVector(TargetKeyName);
 	}
-
-	if (MyCharacter->GetCharacterMovement()->IsFalling())
+	else if (AActor* TargetActor = Cast<AActor>(BlackboardComp->GetValueAsObject(TargetKeyName)))
 	{
-		FVector MoveDirection = (TargetActor->GetActorLocation() - MyCharacter->GetActorLocation()).GetSafeNormal2D();
-		MyCharacter->AddMovementInput(MoveDirection, 1.0f);
-
-		bWasFalling = true;
-
-		if (BlackboardComp)
-		{
-			BlackboardComp->SetValueAsBool(TEXT("IsJumping"), true);
-		}
+		TargetLocation = TargetActor->GetActorLocation();
 	}
 	else
 	{
-		if (bWasFalling)
-		{
-			MyCharacter->GetCharacterMovement()->MaxWalkSpeed = 450.f;
-			bWasFalling = false;
-
-			if (BlackboardComp)
-			{
-				BlackboardComp->SetValueAsBool(TEXT("IsJumping"), false);
-			}
-
-		}
+		LOG_WARNING(TEXT("MoveTask: No valid value at TargetKey = %s"), *TargetKeyName.ToString());
+		return;
 	}
-	
-	FVector Direction = TargetActor->GetActorLocation() - MyCharacter->GetActorLocation();
+
+	float Distance = FVector::Dist(MyCharacter->GetActorLocation(), TargetLocation);
+	AdjustSpeed(MyCharacter, AIController, Distance);
+
+	FVector Direction = TargetLocation - MyCharacter->GetActorLocation();
 	Direction.Z = 0.f;
 
 	if (!Direction.IsNearlyZero())
 	{
 		Direction.Normalize();
-
 		FRotator CurrentRotation = MyCharacter->GetActorRotation();
 		FRotator DesiredRotation = Direction.Rotation();
-
 		FRotator NewRotation = FMath::RInterpTo(CurrentRotation, DesiredRotation, DeltaSeconds, 5.f);
-
 		MyCharacter->SetActorRotation(NewRotation);
-
-		//LOG(Log, TEXT("TickTask: Rotating from %s to %s"), *CurrentRotation.ToString(), *NewRotation.ToString());
 	}
-	else
-	{
-		LOG_WARNING(TEXT("No TargetActor in Blackboard."));
-	}
-		
 }
 
-bool UBTTask_Move::ShouldJump(ADFCharacter* MyCharacter) const
+void UBTTask_Move::AdjustSpeed(ADFCharacter* MyCharacter, ADFAIController* AIController, float Distance)
 {
-	UWorld* World = MyCharacter->GetWorld();
-	if (!World)
+	UCharacterMovementComponent* Movement = MyCharacter->GetCharacterMovement();
+	if (!Movement)
 	{
-		LOG_ERROR(TEXT("No World in ShouldJump."));
-		return false;
+		return;
 	}
 
-	FVector Start = MyCharacter->GetActorLocation() + FVector(0.f, 0.f, 50.f);
-	FVector End = Start + MyCharacter->GetActorForwardVector() * 200.f;
+	const float PrevSpeed = Movement->MaxWalkSpeed;	
 
-	FHitResult HitResult;
-	FCollisionQueryParams Params;
-	Params.AddIgnoredActor(MyCharacter);
+	float NewSpeed = DefaultSpeed;
 
-	bool bHit = World->SweepSingleByChannel
-	(
-		HitResult,
-		Start,
-		End,
-		FQuat::Identity,
-		ECC_Visibility,
-		FCollisionShape::MakeCapsule(30.f, 50.f),
-		Params
-	);
-
-	bool bHasValidObstacle = false;
-
-	if (bHit)
+	if (Distance < AttackRange && Distance > 300.f)
 	{
-		AActor* HitActor = HitResult.GetActor();
-
-		if (HitActor && HitActor->GetClass()->ImplementsInterface(UGrabbable::StaticClass()))
+		EAI_AILevels Level = AIController->GetAILevel();
+		switch (Level)
 		{
-			LOG_WARNING(TEXT("ShouldJump: HitActor is Grabbable. Ignore jump."));
-			return false;
-		}
-
-		if (HitActor && HitActor->FindComponentByClass<UDFDeadZoneComponent>())
-		{
-			LOG_WARNING(TEXT("ShouldJump: HitActor has DFDeadZoneComponent. Ignore jump."));
-			return false;
-		}
-
-
-		if (HitActor && HitActor->IsA<ADFCharacter>())
-		{
-			FHitResult ObstacleHit;
-
-			FVector ObstacleStart = MyCharacter->GetActorLocation() + FVector(0.f, 0.f, 50.f);
-			FVector ObstacleEnd = ObstacleStart + MyCharacter->GetActorForwardVector() * 200;
-
-			FCollisionQueryParams ObstacleParams;
-			ObstacleParams.AddIgnoredActor(MyCharacter);
-			ObstacleParams.AddIgnoredActor(HitActor);
-
-			bool bObstacleHit = World->SweepSingleByChannel(
-				ObstacleHit,
-				ObstacleStart,
-				ObstacleEnd,
-				FQuat::Identity,
-				ECC_Visibility,
-				FCollisionShape::MakeBox(FVector(30, 30, 60)),
-				ObstacleParams
-			);
-
-			if (bObstacleHit)
-			{
-				float Height = ObstacleHit.ImpactPoint.Z - MyCharacter->GetActorLocation().Z;
-
-				if (Height > 10 && Height < 60)
-				{
-					bHasValidObstacle = true;
-				}
-			}
-		}
-		else
-		{
-			float Height = HitResult.ImpactPoint.Z - MyCharacter->GetActorLocation().Z;
-
-			if (Height > 10.f && Height < 60.f)
-			{
-				bHasValidObstacle = true;
-			}
+		case EAI_AILevels::Rookie:
+			NewSpeed += 0.f;
+			break;
+		case EAI_AILevels::Basic:
+			NewSpeed += 100.f;
+			break;
+		case EAI_AILevels::Expert:
+			NewSpeed += 200.f;
+			break;
+		default:
+			break;
 		}
 	}
-	return bHasValidObstacle;
+
+	Movement->MaxWalkSpeed = NewSpeed;
+
+	if (!FMath::IsNearlyEqual(PrevSpeed, Movement->MaxWalkSpeed))
+	{
+		LOG_WARNING(TEXT("MoveTask: Speed adjusted to %.1f"), Movement->MaxWalkSpeed);
+	}
 }

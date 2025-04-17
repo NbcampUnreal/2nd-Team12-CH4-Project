@@ -19,8 +19,20 @@ protected:
 
 	virtual void TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds) override;
 
-	bool ShouldJump(class ADFCharacter* MyCharacter) const;
 
 private:
-	bool bWasFalling;
+	void AdjustSpeed(class ADFCharacter* MyCharacter, class ADFAIController* AIController, float Distance);
+
+	UPROPERTY(EditAnywhere, Category = "AI")
+	float AttackRange;
+
+	UPROPERTY(EditAnywhere, Category = "AI")
+	float DefaultSpeed;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Blackboard")
+	FName MoveLocationKey;
+
+
+
+	
 };

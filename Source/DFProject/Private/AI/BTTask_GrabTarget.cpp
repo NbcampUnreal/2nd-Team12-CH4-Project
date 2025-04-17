@@ -17,10 +17,10 @@ UBTTask_GrabTarget::UBTTask_GrabTarget()
 
 EBTNodeResult::Type UBTTask_GrabTarget::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
 {
-	AAIController* AIController = OwnerComp.GetAIOwner();
+	ADFAIController* AIController = Cast<ADFAIController>(OwnerComp.GetAIOwner());
 	if (!AIController)
 	{
-		LOG_WARNING(TEXT("ExecuteTask : No AIController"));
+		LOG_ERROR(TEXT("DFAIController not found"));
 		return EBTNodeResult::Failed;
 	}
 
@@ -70,6 +70,7 @@ EBTNodeResult::Type UBTTask_GrabTarget::EvaluateAndAttemptGrab(ADFCharacter* MyC
 	{
 		LOG_WARNING(TEXT("GrabTask: 대상이 스턴 상태가 아님 (현재 상태: %d) → 실패"), static_cast<int32>(TargetState));
 		MyCharacter->Server_ReleaseGrab();
+		MyCharacter->Server_StopGrab();
 		return EBTNodeResult::Failed;
 	}
 

@@ -8,6 +8,7 @@
 #include "Character/State/CharacterStateManager.h"
 #include "Character/State/CharacterStateBase.h" 
 #include "GameFramework/CharacterMovementComponent.h"
+#include "TimerManager.h"
 #include "DFProject.h"
 
 UBTTask_ThrowGrabbedTarget::UBTTask_ThrowGrabbedTarget()
@@ -17,17 +18,16 @@ UBTTask_ThrowGrabbedTarget::UBTTask_ThrowGrabbedTarget()
 	GrabTargetActorKey = TEXT("GrabTargetActor");
 
 	ThrowPower = 1000.f;
-	ThrowDelay = 1.0f;
 
 	bNotifyTick = false;
 }
 
 EBTNodeResult::Type UBTTask_ThrowGrabbedTarget::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
 {
-	AAIController* AIController = OwnerComp.GetAIOwner();
+	ADFAIController* AIController = Cast<ADFAIController>(OwnerComp.GetAIOwner());
 	if (!AIController)
 	{
-		LOG_WARNING(TEXT("ExecuteTask : No AIController"));
+		LOG_ERROR(TEXT("DFAIController not found"));
 		return EBTNodeResult::Failed;
 	}
 
@@ -46,58 +46,88 @@ EBTNodeResult::Type UBTTask_ThrowGrabbedTarget::ExecuteTask(UBehaviorTreeCompone
 	}
 
 	AActor* TargetActor = Cast<AActor>(BlackboardComp->GetValueAsObject(GrabTargetActorKey));
-	if (!TargetActor)
+	ADFCharacter* TargetCharacter = Cast<ADFCharacter>(TargetActor);
+
+	if (!TargetCharacter)
 	{
-		LOG_WARNING(TEXT("ExecuteTask : No Grabbed Target Actor"));
+		LOG_WARNING(TEXT("ExecuteTask : No Grabbed Target Character"));
 		return EBTNodeResult::Failed;
 	}
 
-	return EvaluateAndAttemptThrow(MyCharacter, MyCharacter); 
+	return EvaluateAndAttemptThrow(MyCharacter, TargetCharacter);
 }
 
 EBTNodeResult::Type UBTTask_ThrowGrabbedTarget::EvaluateAndAttemptThrow(ADFCharacter* MyCharacter, ADFCharacter* TargetCharacter)
 {
 	if (!MyCharacter)
 	{
-		LOG_WARNING(TEXT("GrabTask: MyCharacter 없음"));
+		LOG_WARNING(TEXT("ThrowTask: MyCharacter 없음"));
 		return EBTNodeResult::Failed;
 	}
 
 	if (!TargetCharacter)
 	{
-		LOG_WARNING(TEXT("GrabTask: GrabTargetCharacter 없음"));
+		LOG_WARNING(TEXT("ThrowTask: GrabTargetCharacter 없음"));
 		return EBTNodeResult::Failed;
 	}
 
 	if (!TargetCharacter->StateManager || !TargetCharacter->StateManager->CurrentState)
 	{
-		LOG_WARNING(TEXT("GrabTask: 대상 상태 정보 없음"));
+		LOG_WARNING(TEXT("ThrowTask: 대상 상태 정보 없음"));
 		return EBTNodeResult::Failed;
 	}
 
 	const ECharacterStateType TargetState = TargetCharacter->StateManager->CurrentState->GetStateType();
+	LOG_WARNING(TEXT("ThrowTask: Target 상태 = %d"), static_cast<int32>(TargetState));
+
 	if (TargetState != ECharacterStateType::Stunned)
 	{
-		MyCharacter->Server_ReleaseGrab(); 
+		LOG_WARNING(TEXT("ThrowTask: Target 상태가 Stunned 아님"));
+		MyCharacter->Server_ReleaseGrab();
+		MyCharacter->Server_StopGrab();
 		return EBTNodeResult::Failed;
 	}
-	
+
+	// 1. 점프
 	MyCharacter->Jump();
+	LOG_WARNING(TEXT("ThrowTask: AI 점프 실행"));
 
-	MyCharacter->Server_ReleaseGrab();  
+	FTimerHandle JumpDelay;
+	MyCharacter->GetWorld()->GetTimerManager().SetTimer(
+		JumpDelay,
+		[]()
+		{
 
+		},
+		0.5f, false
+		);
 
-	const FVector ThrowDirection = (TargetCharacter->GetActorLocation() - MyCharacter->GetActorLocation()).GetSafeNormal();
+	// 2. 그랩 해제
+	MyCharacter->Server_ReleaseGrab();
+	MyCharacter->Server_StopGrab();
+
+	// 3. Impulse 던지기
 	if (UPrimitiveComponent* Mesh = TargetCharacter->GetMesh())
 	{
-		Mesh->AddImpulse(ThrowDirection * ThrowPower, NAME_None, true);
-		LOG_WARNING(TEXT("ThrowTask: 던지기 성공 (Impulse 적용)"));
+		const FVector ThrowDir = (TargetCharacter->GetActorLocation() - MyCharacter->GetActorLocation()).GetSafeNormal();
+		Mesh->AddImpulse(ThrowDir * ThrowPower, NAME_None, true);
+		LOG_WARNING(TEXT("ThrowTask: Impulse 적용 완료"));
 	}
 	else
 	{
-		LOG_WARNING(TEXT("ThrowTask: 대상 Mesh 없음 → 던지기 실패"));
+		LOG_WARNING(TEXT("ThrowTask: TargetCharacter Mesh 없음"));
 		return EBTNodeResult::Failed;
 	}
+
+	FTimerHandle FinishDelay;
+	MyCharacter->GetWorld()->GetTimerManager().SetTimer(
+		FinishDelay,
+		[]()
+		{
+	
+		},
+		0.5f, false
+		);
 
 	return EBTNodeResult::Succeeded;
 }

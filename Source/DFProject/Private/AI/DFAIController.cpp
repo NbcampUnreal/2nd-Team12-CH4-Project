@@ -66,3 +66,8 @@ bool ADFAIController::Server_SetAILevel_Validate(EAI_AILevels NewLevel)
 {
 	return true;
 }
+
+EAI_AILevels ADFAIController::GetAILevel() const
+{
+	return CurrentAILevel;
+}

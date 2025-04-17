@@ -27,7 +27,7 @@ void UBTService_GrabManager::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* 
 {
 	Super::TickNode(OwnerComp, NodeMemory, DeltaSeconds);
 
-	AAIController* AIController = OwnerComp.GetAIOwner();
+	ADFAIController* AIController = Cast<ADFAIController>(OwnerComp.GetAIOwner());
 	if (!AIController)
 	{
 		return;
@@ -83,7 +83,6 @@ void UBTService_GrabManager::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* 
 		BlackboardComp->SetValueAsObject(GrabTargetActorKey, ClosestStunned);
 		BlackboardComp->SetValueAsBool(CanGrabKey, true);
 
-		//LOG_WARNING(TEXT("GrabManager: 스턴된 적 발견 → %s (거리 %.0f)"), *ClosestStunned->GetName(), ClosestDistance);
 	}
 	else
 	{
