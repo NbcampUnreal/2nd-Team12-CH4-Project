@@ -20,14 +20,14 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "PhysicsEngine/PhysicalAnimationComponent.h"
 #include "DirGravity/Public/GravityMovementComponent.h"
+#include "Item/DFItemBaseActor.h"
 #include "Net/UnrealNetwork.h"
 #include "PhysicsEngine/PhysicsConstraintComponent.h"
 
 DEFINE_LOG_CATEGORY(LogDamaged);
 DEFINE_LOG_CATEGORY(LogInitialize);
 
-ADFCharacter::ADFCharacter(const FObjectInitializer& ObjectInitializer)
-	:Super(ObjectInitializer.SetDefaultSubobjectClass<UGravityMovementComponent>(ACharacter::CharacterMovementComponentName))
+ADFCharacter::ADFCharacter()
 {
 	
 	PrimaryActorTick.bCanEverTick = true;
@@ -208,9 +208,22 @@ void ADFCharacter::DeadEvent()
 	StateManager->SetState(NewObject<UDeadState>(this));
 }
 
-UGravityMovementComponent* ADFCharacter::GetGravityMovementComponent()
+ADFItemBaseActor* ADFCharacter::GetCurrentItem()
 {
-	return Cast<UGravityMovementComponent>(GetMovementComponent());
+	TArray<UGrabComponent*> GrabComponents = { RightGrabComp, LeftGrabComp };
+
+	for (UGrabComponent* GrabComp : GrabComponents)
+	{
+		if (GrabComp)
+		{
+			AActor* GrabbedActor = GrabComp->GetGrabTargetActor();
+			if (ADFItemBaseActor* Item = Cast<ADFItemBaseActor>(GrabbedActor))
+			{
+				return Item;
+			}
+		}
+	}
+	return nullptr;
 }
 
 void ADFCharacter::ReadyToPlay()
@@ -273,20 +286,6 @@ void ADFCharacter::RegisterAbilities()
 {
 	AbilityManager->ClearAllAbilities();
 	AbilityManager->InitializeAbilities();
-}
-
-void ADFCharacter::UpdateSpringArmOrientation()
-{
-	if (!SpringArm) return;
-
-	const FVector CharacterUp = GetActorUpVector();
-	const FVector CameraForward = FRotationMatrix(FRotator(0.f, SpringYaw, 0.f)).GetUnitAxis(EAxis::X);
-	const FVector AdjustedForward = FVector::VectorPlaneProject(CameraForward, CharacterUp).GetSafeNormal();
-
-	const FRotator CameraRot = FRotationMatrix::MakeFromXZ(AdjustedForward, CharacterUp).Rotator();
-	const FRotator FinalRot = CameraRot + FRotator(-25.f, 0.f, 0.f);
-
-	SpringArm->SetWorldRotation(FinalRot);
 }
 
 void ADFCharacter::Initialize()
@@ -502,12 +501,7 @@ void ADFCharacter::Server_Punch_Implementation()
 void ADFCharacter::Server_UseItem_Implementation()
 {
 	if (!StateManager->IsCurrentState(ECharacterStateType::Grabbed)) return;
-
-	AActor* GrabActor = RightGrabComp->GetGrabTargetActor();
-	if (!GrabActor) return;
-	
 	AbilityManager->StartAbility("UseItem", this);
-	IGrabbable::Execute_Use(GrabActor);
 }
 
 void ADFCharacter::Stun()

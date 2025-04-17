@@ -16,6 +16,8 @@ class DFPROJECT_API UAbilityStrategyManager : public UActorComponent
 public:
 	void RegisterAbility(FName AbilityName, UAbilityStrategy* Ability);
 
+	void RemoveAbility(FName AbilityName);
+	
 	void StartAbility(FName AbilityName, AActor* TargetActor);
 
 	void StopAbility(FName AbilityName, AActor* TargetActor);
@@ -23,7 +25,9 @@ public:
 	bool IsAbilityActive(FName AbilityName) const;
 
 	void ClearAllAbilities();
+	
 	void InitializeAbilities();
+	
 	UPROPERTY(EditAnywhere, Category=Ability)
 	TMap<FName, TSubclassOf<UAbilityStrategy>> InitialAbilities;
 protected:

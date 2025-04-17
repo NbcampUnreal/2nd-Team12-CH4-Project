@@ -15,6 +15,7 @@ void UBodyPartGrabHandler::Initialize(ABodyPart* BodyPart)
 
 	GrabCollider = BodyPart->GetBodyCollider();
 	GrabCollider->OnComponentBeginOverlap.AddDynamic(this, &UBodyPartGrabHandler::OnGrabColliderBeginOverlap);
+	GrabCollider->OnComponentHit.AddDynamic(this, &UBodyPartGrabHandler::OnGrabColliderHit);
 }
 
 void UBodyPartGrabHandler::SetGrabConstraint(UPhysicsConstraintComponent* Constraint)

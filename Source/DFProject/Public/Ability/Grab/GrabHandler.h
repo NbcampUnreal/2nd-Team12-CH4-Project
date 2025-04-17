@@ -70,6 +70,12 @@ protected:
 		const FHitResult& SweepResult
 		);
 	
+	UFUNCTION()
+	void OnGrabColliderHit(UPrimitiveComponent* HitComponent,
+					   AActor* OtherActor,
+					   UPrimitiveComponent* OtherComp,
+					   FVector NormalImpulse,
+					   const FHitResult& Hit);
 	UPROPERTY()
 	UGrabComponent* OwningGrabComponent;
 

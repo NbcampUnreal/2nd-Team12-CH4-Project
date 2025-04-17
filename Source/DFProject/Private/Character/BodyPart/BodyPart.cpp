@@ -19,14 +19,18 @@ ABodyPart::ABodyPart()
 
 	BoneConstraint = CreateDefaultSubobject<UPhysicsConstraintComponent>(TEXT("HandConstraint"));
 
-	BoneConstraint->SetAngularSwing1Limit(EAngularConstraintMotion::ACM_Locked, 45.f);
-	BoneConstraint->SetAngularSwing2Limit(EAngularConstraintMotion::ACM_Locked, 45.f);
-	BoneConstraint->SetAngularTwistLimit(EAngularConstraintMotion::ACM_Locked, 45.f);
-
+	BoneConstraint->SetAngularSwing1Limit(EAngularConstraintMotion::ACM_Locked, 0.f);
+	BoneConstraint->SetAngularSwing2Limit(EAngularConstraintMotion::ACM_Locked, 0.f);
+	BoneConstraint->SetAngularTwistLimit(EAngularConstraintMotion::ACM_Locked, 0.f);
+	BoneConstraint->SetAngularDriveMode(EAngularDriveMode::TwistAndSwing);
+	BoneConstraint->SetAngularVelocityDriveTwistAndSwing(true, true);
+	BoneConstraint->SetAngularDriveParams(1000000.f,5000.f, 0.f);
+	
 	BoneConstraint->SetDisableCollision(true);
 
 	SetReplicates(true);
 	SetReplicateMovement(false);
+	
 	BodyCollider->SetIsReplicated(true);
 	BoneConstraint->SetIsReplicated(true);
 }

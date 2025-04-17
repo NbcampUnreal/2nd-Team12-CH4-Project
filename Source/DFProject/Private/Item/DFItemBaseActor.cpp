@@ -4,6 +4,7 @@
 #include "Item/DFItemAbilityComponent.h"
 #include "Character/DFCharacter.h"
 #include "Ability/Strategy/AbilityStrategy.h"
+#include "Ability/Strategy/AbilityStrategyManager.h"
 #include "Character/BodyPart/AttachInfoComponent.h"
 #include "Components/SphereComponent.h"
 #include "PhysicsEngine/PhysicalAnimationComponent.h"
@@ -178,4 +179,36 @@ FText ADFItemBaseActor::GetItemName() const
 int32 ADFItemBaseActor::GetItemPrice() const
 {
 	return DataAssetInfo->ItemPrice;
+}
+
+void ADFItemBaseActor::OnGrabbedBy_Implementation(AActor* Grabber, UPhysicsConstraintComponent* GrabbersConstraint)  
+{
+	if (!Grabber) return;
+	// 캐릭터고, 제대로 잡았다면 어빌리티 부여  
+	ADFCharacter* Character = Cast<ADFCharacter>(Grabber);  
+	if (Character && bCanBeGrabbed)  
+	{  
+		Character->AbilityManager->RegisterAbility("UseItem", NewObject<UAbilityStrategy>(Character, OwnerCharacterAbility));  
+	}  
+}  
+  
+void ADFItemBaseActor::OnGrabReleasedBy_Implementation(AActor* Grabber)  
+{  
+	if (!Grabber) return;
+	// 캐릭터고, 제대로 잡았다면 어빌리티 제거  
+	ADFCharacter* Character = Cast<ADFCharacter>(Grabber);  
+	if (Character && bCanBeGrabbed)  
+	{  
+		Character->AbilityManager->RemoveAbility("UseItem");  
+	}  
+}  
+  
+UPrimitiveComponent* ADFItemBaseActor::GetRoot_Implementation()  
+{  
+	return ItemMesh;  
+}  
+  
+TArray<FName> ADFItemBaseActor::GetGrabSocketNames_Implementation() const  
+{  
+	return ItemMesh->GetAllSocketNames();  
 }

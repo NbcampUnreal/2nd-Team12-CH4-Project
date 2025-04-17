@@ -69,4 +69,6 @@ public:
 	TSubclassOf<UAbilityStrategy> CharacterAbility;
 
 	virtual FPrimaryAssetId GetPrimaryAssetId() const override;
+
+	
 };

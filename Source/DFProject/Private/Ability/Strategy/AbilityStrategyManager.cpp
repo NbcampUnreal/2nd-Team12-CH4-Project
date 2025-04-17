@@ -24,6 +24,14 @@ void UAbilityStrategyManager::RegisterAbility(FName AbilityName, UAbilityStrateg
 	RegisteredAbilities.Add(AbilityName, Ability);
 }
 
+void UAbilityStrategyManager::RemoveAbility(FName AbilityName)
+{
+	if (RegisteredAbilities.Contains(AbilityName))
+	{
+		RegisteredAbilities.Remove(AbilityName);
+	}
+}
+
 void UAbilityStrategyManager::StartAbility(FName AbilityName, AActor* TargetActor)
 {
 	if (UAbilityStrategy* Ability = RegisteredAbilities.FindRef(AbilityName))

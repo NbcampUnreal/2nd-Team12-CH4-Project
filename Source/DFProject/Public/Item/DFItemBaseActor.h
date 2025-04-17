@@ -81,7 +81,16 @@ public:
 
 	virtual void SetupItem(const FItemInstanceData& InData);
 
+	virtual void OnGrabbedBy_Implementation(AActor* Grabber, UPhysicsConstraintComponent* GrabbersConstraint) override; // 잡힐 때 호출
+
+	virtual void OnGrabReleasedBy_Implementation(AActor* Grabber) override; // 아이템을 놓을 때 호출
+	
+	virtual UPrimitiveComponent* GetRoot_Implementation() override; // 잡을 물체 (메시나 콜라이더)
+
+	virtual TArray<FName> GetGrabSocketNames_Implementation() const;
+
 protected:
 	virtual void BeginPlay() override;
 
+	
 };

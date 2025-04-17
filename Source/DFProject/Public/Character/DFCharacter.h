@@ -6,18 +6,14 @@
 #include "Ability/Grab/Grabbable.h"
 #include "GameFramework/Character.h"
 #include "PhysicsEngine/PhysicalAnimationComponent.h"
-#include "PhysicsEngine/PhysicsConstraintComponent.h"
 #include "DFCharacter.generated.h"
 
-class UDFPoseableMeshComponent;
-class UPoseableMeshComponent;
-class UGravityMovementComponent;
+class ADFItemBaseActor;
 class UAbilityStrategyManager;
 class UCharacterStateManager;
 class UMovementModifierComponent;
 class UGrabComponent;
 class UPhysicalAnimationComponent;
-class AFist;
 class UCameraComponent;
 class USpringArmComponent;
 class UInputAction;
@@ -35,7 +31,7 @@ class DFPROJECT_API ADFCharacter : public ACharacter, public IGrabbable
 	GENERATED_BODY()
 
 public:
-	ADFCharacter(const FObjectInitializer& ObjectInitializer);
+	ADFCharacter();
 
 protected:
 	virtual void BeginPlay() override;
@@ -46,13 +42,14 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 
-	ABodyPart* GetBodyPart(EBodyPartType Type);
-
 	UFUNCTION(BlueprintCallable)
-	void DeadEvent();
+	ABodyPart* GetBodyPart(EBodyPartType Type);
 	
 	UFUNCTION(BlueprintCallable)
-	UGravityMovementComponent* GetGravityMovementComponent();
+	void DeadEvent();
+
+	UFUNCTION(BlueprintCallable)
+	ADFItemBaseActor* GetCurrentItem();
 	
 	////// 캐릭터 세팅
 	UFUNCTION(BlueprintCallable, Category="Initialize")
@@ -68,20 +65,15 @@ public:
 	void ApplyPhysicalAnimationSettings();
 
 	void RegisterAbilities();
-
-
+	
 	UFUNCTION(BlueprintCallable, Category="Respawn")
 	void Initialize();
 	///////
 	
-	UFUNCTION(BlueprintCallable)
-	void UpdateSpringArmOrientation();
-
-	float SpringYaw = 0.f;
 	////// 캐릭터 액션
 	void Move(const FInputActionValue& Value);
 	
-	UFUNCTION(Server, Reliable) // 반드시 반영해야해서 Reliable로 했는데 잘 모르겠음.
+	UFUNCTION(Server, UnReliable) // 반드시 반영해야해서 Reliable로 했는데 잘 모르겠음.
 	void Server_Move(const FRotator& Rotation);
 
 	UFUNCTION(NetMulticast, Unreliable)
@@ -89,38 +81,38 @@ public:
 	
 	void BasicAttack(const FInputActionValue& Value);
 
-	UFUNCTION(Server, Reliable, BlueprintCallable)
+	UFUNCTION(Server, UnReliable, BlueprintCallable)
 	void Server_Punch();
 	
-	UFUNCTION(Server, Reliable, BlueprintCallable)
+	UFUNCTION(Server, UnReliable, BlueprintCallable)
 	void Server_UseItem();
 	
-	void StartSprint(const FInputActionValue& Value); //  CharacterMovement의 스피드 올리기 (이건 자동 리플), 달리기 이펙트 생성
+	void StartSprint(const FInputActionValue& Value); //  CharacterMovement의 스피드 올리기 (이건 자동 리플), 달리기 이펙트 생성?
 
-	void StopSprint(const FInputActionValue& Value); //  CharacterMovement의 스피드 올리기 (이건 자동 리플), 달리기 이펙트 생성
+	void StopSprint(const FInputActionValue& Value);
 	
 	void Look(const FInputActionValue& Value); // 다른 클라는 몰라도 되니까 로컬만
 
 	void StartGrab(const FInputActionValue& Value);
 
-	UFUNCTION(Server, Reliable, BlueprintCallable)
+	UFUNCTION(Server, UnReliable, BlueprintCallable) // 어빌리티로 이동 예정
 	void Server_StartGrab();
 
 	void StopGrab(const FInputActionValue& Value);
 	
-	UFUNCTION(Server, Reliable, BlueprintCallable)
+	UFUNCTION(Server, UnReliable, BlueprintCallable)
 	void Server_StopGrab();
 
 	void ReleaseGrab(const FInputActionValue& Value);
 
-	UFUNCTION(Server, Reliable, BlueprintCallable)
+	UFUNCTION(Server, UnReliable, BlueprintCallable)
 	void Server_ReleaseGrab();
 	
 	void StartJump(const FInputActionValue& Value);
 	
 	void Headbutt(const FInputActionValue& Value);
 
-	UFUNCTION(Server, Reliable, BlueprintCallable)
+	UFUNCTION(Server, UnReliable, BlueprintCallable)
 	void Server_Headbutt();
 	///////
 	
@@ -141,10 +133,13 @@ public:
 	
 	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
+	// 잡은 대상의 진짜 owner
 	virtual AActor* GetActualTarget_Implementation() override;
 
+	// Movement Modifier에서 저항력 계산에 사용
 	virtual FVector GetResistanceForce_Implementation(AActor* PullingActor) override;
 
+	// 잡혔을 때
 	virtual void OnGrabbed_Implementation(AActor* TargetActor) override;
 
 	virtual void OnGrabbedBy_Implementation(AActor* Grabber, UPhysicsConstraintComponent* InGrabberConstraint) override;
@@ -156,7 +151,6 @@ public:
 	virtual UPrimitiveComponent* GetRoot_Implementation() override;
 
 	virtual void DestroyThis_Implementation() override;
-
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category=Camera)
 	TObjectPtr<USpringArmComponent> SpringArm;
@@ -181,7 +175,6 @@ public:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Input)
 	TObjectPtr<UInputAction> ReleaseGrabAction;
-	
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Input)
 	TObjectPtr<UInputAction> TossAction;
@@ -219,7 +212,7 @@ public:
 	UPROPERTY()
 	FTransform MeshOffset;
 
-	bool bLeft = true;
+	bool bLeft = true; // 주먹질 왼손?
 
 	float MaxHP = 100.0f;
 	// 체력바 없으면 복제할 필요가 있을까?
@@ -243,10 +236,11 @@ public:
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<UMovementModifierComponent> MovementModifier;
 
+	// 얘도 서버만 가지도록. 스킬 사용은 서버에서만
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<UAbilityStrategyManager> AbilityManager;
 
-	// 아직 상태에 따라 이펙트나 ui를 보여주지 않으니 서버용으로 사용 (클라는 모르도록)
+	// 나중에 이펙트 추가?
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<UCharacterStateManager> StateManager;
 };

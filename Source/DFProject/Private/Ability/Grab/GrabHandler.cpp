@@ -57,3 +57,25 @@ void UGrabHandler::OnGrabColliderBeginOverlap(UPrimitiveComponent* OverlappedCom
 
 	OverlapGrabTarget(TargetInfo);
 }
+
+void UGrabHandler::OnGrabColliderHit(UPrimitiveComponent* HitComponent, AActor* OtherActor,
+	UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
+{
+	if (!OwningGrabComponent || OwningGrabComponent->GetCurrentGrabState() != EGrabState::Detecting) return;
+	if (!IsGrabbable(OtherActor)) return;
+
+	AActor* MyOwner = OwningGrabComponent->GetOwner();
+	AActor* OtherOwner = OtherActor ? OtherActor->GetOwner() : nullptr;
+
+	if (OtherActor == MyOwner || OtherOwner == MyOwner)
+		return;
+	
+	FGrabTargetInfo TargetInfo;
+	
+	TargetInfo.TargetActor = OtherActor;
+	TargetInfo.TargetComponent = OtherComp;
+	TargetInfo.HitLocation = Hit.ImpactPoint;
+	TargetInfo.HitNormal = Hit.ImpactNormal;
+
+	OverlapGrabTarget(TargetInfo);
+}
