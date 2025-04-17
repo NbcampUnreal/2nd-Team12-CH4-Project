@@ -76,6 +76,7 @@ void ADFItemBaseActor::SetupItem(const FItemInstanceData& InData)
 	ItemMesh->SetAnimInstanceClass(LoadedItem->AnimBP);
 	ItemMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	ItemMesh->SetCollisionResponseToChannel(ECC_Visibility, ECollisionResponse::ECR_Overlap);
+	ItemMesh->SetCollisionResponseToChannel(ECC_PhysicsBody, ECollisionResponse::ECR_Overlap);
 	ItemMesh->SetIsReplicated(true);
 	ItemMesh->SetSimulatePhysics(true);
 
