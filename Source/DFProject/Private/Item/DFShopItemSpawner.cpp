@@ -43,8 +43,6 @@ void ADFShopItemSpawner::BeginPlay()
 
 void ADFShopItemSpawner::SpawnItemToShop()
 {
-	GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, FString::Printf(TEXT("SpawnItemToShop")));
-
 	FPrimaryAssetType ItemType = FPrimaryAssetType("WearableItem");
 
 	TArray<FPrimaryAssetId> AssetIds;
@@ -63,8 +61,6 @@ void ADFShopItemSpawner::SpawnItemToShop()
 
 	for (int i = 0; i < AssetIds.Num(); i++)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 10.0f, FColor::Blue, FString::Printf(TEXT("Index : %d"), i));
-
 		UAssetManager::Get().LoadPrimaryAsset(AssetIds[i], {}, FStreamableDelegate::CreateLambda([=, this]() {
 			UObject* Loaded = UAssetManager::Get().GetPrimaryAssetObject(AssetIds[i]);
 			UDFWearableItem* LoadedItem = Cast<UDFWearableItem>(Loaded);
@@ -86,8 +82,6 @@ void ADFShopItemSpawner::SpawnItemToShop()
 			}
 
 			FString Name = SpawnPoints[i]->GetActorLabel();
-
-			GEngine->AddOnScreenDebugMessage(-1, 10.0f, FColor::Blue, FString::Printf(TEXT("SpawnPoint %d : %s"), i, *Name));
 
 			FTransform SpawnTransform = SetSpawnTransform(i);
 

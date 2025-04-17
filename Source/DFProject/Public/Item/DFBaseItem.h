@@ -35,6 +35,9 @@ public:
 	FText DisplayItemName;
 
 	UPROPERTY(EditAnywhere, Category = "Item")
+	int32 ItemPrice;
+
+	UPROPERTY(EditAnywhere, Category = "Item")
 	EItemType ItemType;
 
 	UPROPERTY(EditAnywhere, Category = "Item")
@@ -54,6 +57,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Item")
 	FName GetItemId() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Item")
+	int32 GetItemPrice() const;
 
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<ADFItemBaseActor> ItemActorClass;

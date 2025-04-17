@@ -35,4 +35,14 @@ void ADFWearableItemActor::SetActor(UDFWearableItem* ItemDataToShow)
 	}
 }
 
+FText ADFWearableItemActor::GetItemName() const
+{
+	return WearableItemData->DisplayItemName;
+}
+
+int32 ADFWearableItemActor::GetItemPrice() const
+{
+	return WearableItemData->ItemPrice;
+}
+
 

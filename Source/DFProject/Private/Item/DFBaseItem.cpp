@@ -19,3 +19,8 @@ FName UDFBaseItem::GetItemId() const
 {
 	return ItemID;
 }
+
+int32 UDFBaseItem::GetItemPrice() const
+{
+	return ItemPrice;
+}
