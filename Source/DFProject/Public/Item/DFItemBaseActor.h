@@ -13,6 +13,7 @@ class USphereComponent;
 class UDFItemAbilityComponent;
 class UPhysicalAnimationComponent;
 class UAbilityStrategy;
+class UDFBaseItem;
 
 UCLASS()
 class DFPROJECT_API ADFItemBaseActor : public AActor , public IGrabbable
@@ -38,6 +39,8 @@ public:
 
 	UPROPERTY(ReplicatedUsing = OnRep_ItemData)
 	FItemInstanceData ItemData;
+
+	UDFBaseItem* DataAssetInfo;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item")
 	bool bCanBeGrabbed;
@@ -70,8 +73,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Item")
 	TSubclassOf<UAbilityStrategy> GetCharacterAbility() const;
 
-	UFUNCTION(BlueprintCallable, Category = "Item")
-	virtual FText GetItemName() const;
+	//UFUNCTION(BlueprintCallable, Category = "Item")
+	//virtual FText GetItemName() const;
+
+	//UFUNCTION(BlueprintCallable, Category = "Item")
+	//virtual int32 GetItemPrice() const;
 
 	virtual void SetupItem(const FItemInstanceData& InData);
 

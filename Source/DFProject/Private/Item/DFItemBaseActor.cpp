@@ -2,6 +2,7 @@
 #include "Item/DFItemInstance.h"
 #include "Item/DFBattleItem.h"
 #include "Item/DFItemAbilityComponent.h"
+#include "Character/DFCharacter.h"
 #include "Ability/Strategy/AbilityStrategy.h"
 #include "Character/BodyPart/AttachInfoComponent.h"
 #include "Components/SphereComponent.h"
@@ -68,6 +69,8 @@ void ADFItemBaseActor::SetupItem(const FItemInstanceData& InData)
 		return;
 	}
 	
+	DataAssetInfo = LoadedItem;
+
 	ItemMesh->SetSkeletalMesh(LoadedItem->ItemMesh);	
 	ItemMesh->SetAnimationMode(EAnimationMode::AnimationBlueprint);
 	ItemMesh->SetAnimInstanceClass(LoadedItem->AnimBP);
@@ -129,7 +132,10 @@ void ADFItemBaseActor::OnGripAreaBeginOverlap(
 	bool bFromSweep,
 	const FHitResult& SweepResult)
 {
-	bCanBeGrabbed = true;
+	if (OtherActor->IsA(ADFCharacter::StaticClass()))
+	{
+		bCanBeGrabbed = true;
+	}
 }
 
 void ADFItemBaseActor::OnGripAreaEndOverlap(
@@ -138,7 +144,10 @@ void ADFItemBaseActor::OnGripAreaEndOverlap(
 	UPrimitiveComponent* OtherComp,
 	int32 OtherBodyIndex)
 {
-	bCanBeGrabbed = false;
+	if (OtherActor->IsA(ADFCharacter::StaticClass()))
+	{
+		bCanBeGrabbed = false;
+	}
 }
 
 void ADFItemBaseActor::AbilitiesMainAction()
@@ -158,7 +167,12 @@ TSubclassOf<UAbilityStrategy> ADFItemBaseActor::GetCharacterAbility() const
 	return OwnerCharacterAbility;
 }
 
-FText ADFItemBaseActor::GetItemName() const
-{
-	return FText();
-}
+//FText ADFItemBaseActor::GetItemName() const
+//{
+//	return DataAssetInfo->DisplayItemName;
+//}
+//
+//int32 ADFItemBaseActor::GetItemPrice() const
+//{
+//	return DataAssetInfo->ItemPrice;
+//}
