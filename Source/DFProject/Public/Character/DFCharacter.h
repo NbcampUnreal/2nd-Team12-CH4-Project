@@ -44,7 +44,6 @@ protected:
 public:
 	
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 
 	ABodyPart* GetBodyPart(EBodyPartType Type);

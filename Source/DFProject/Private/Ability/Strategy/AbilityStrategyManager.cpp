@@ -7,7 +7,20 @@
 
 void UAbilityStrategyManager::RegisterAbility(FName AbilityName, UAbilityStrategy* Ability)
 {
-	if (!Ability || RegisteredAbilities.Contains(AbilityName)) return;
+	if (!Ability) return;
+	
+	if (UAbilityStrategy* ExistingAbility = RegisteredAbilities.FindRef(AbilityName))
+	{
+		if (ExistingAbility->bIsAbilityActive)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Ability '%s' is currently active and cannot be overwritten."), *AbilityName.ToString());
+			return;
+		}
+
+		//ExistingAbility->EndAbility(nullptr); 대상 미상
+		RegisteredAbilities.Remove(AbilityName);
+	}
+
 	RegisteredAbilities.Add(AbilityName, Ability);
 }
 

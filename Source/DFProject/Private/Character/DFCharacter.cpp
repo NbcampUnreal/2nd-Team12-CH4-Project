@@ -80,17 +80,13 @@ void ADFCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Super::EndPlay(EndPlayReason);
 
-	if (GrabberConstraint.Get() && !GrabberConstraint->IsBroken())
-		GrabberConstraint->BreakConstraint();
-	
-	
+	StateManager->SetState(NewObject<UDeadState>(this));
+
 	for (auto Body : BodyParts)
 	{
 		if (Body) Body->Destroy();
 	}
 }
-
-
 
 void ADFCharacter::Tick(float DeltaTime)
 {

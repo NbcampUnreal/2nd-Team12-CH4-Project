@@ -247,7 +247,7 @@ bool UGrabComponent::IsValidGrabTarget(AActor* Actor) const
 FVector UGrabComponent::ComputeDetectionStart() const
 {
 	if (!GetOwner()) return FVector::ZeroVector;
-	return GetOwner()->GetActorLocation() + GetOwner()->GetActorForwardVector() * 20.f; // 오프셋
+	return GetOwner()->GetActorLocation() + GetOwner()->GetActorForwardVector() * FrontOffset; // 오프셋
 }
 
 FVector UGrabComponent::ComputeDetectionEnd() const

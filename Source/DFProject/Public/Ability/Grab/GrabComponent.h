@@ -116,5 +116,8 @@ protected:
 	FGrabTargetInfo GrabbedTargetInfo;
 
 	TObjectPtr<UPhysicsConstraintComponent> GrabConstraint;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	float FrontOffset = 30.0f;
 };
 
