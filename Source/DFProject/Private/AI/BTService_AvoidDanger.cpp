@@ -49,7 +49,6 @@ void UBTService_AvoidDanger::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* 
 
 	const FVector MyLocation = AIPawn->GetActorLocation();
 
-	// ✅ Danger 해제 거리 조정
 	const float DangerEscapeThreshold = 500.f;
 	if (BlackboardComp->GetValueAsBool(IsNearDangerKey))
 	{
@@ -59,7 +58,7 @@ void UBTService_AvoidDanger::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* 
 			const float Distance = FVector::Dist2D(MyLocation, AvoidLoc);
 			if (Distance > DangerEscapeThreshold)
 			{
-				LOG_WARNING(TEXT("✅ 충분히 회피 성공 → Danger 해제"));
+				LOG_WARNING(TEXT("Avoid OO -> Danger Clear"));
 				BlackboardComp->ClearValue(AvoidLocationKey);
 				BlackboardComp->SetValueAsBool(IsNearDangerKey, false);
 				return;
@@ -67,7 +66,6 @@ void UBTService_AvoidDanger::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* 
 		}
 	}
 
-	// ✅ 위험 감지
 	FVector DangerDirection = FVector::ZeroVector;
 	bool bDangerDetected = false;
 
@@ -88,21 +86,20 @@ void UBTService_AvoidDanger::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* 
 
 	if (bDangerDetected && !DangerDirection.IsNearlyZero())
 	{
-		// 항상 반대 방향으로 회피
 		const FVector AvoidDir = -DangerDirection.GetSafeNormal2D();
 
 		const float DeadZoneRadius = 100.f;
 		const float SafeMargin = 200.f;
-		const float FinalAvoidDistance = 500.f; //AvoidDistance * 2.f + DeadZoneRadius + SafeMargin;
+		const float FinalAvoidDistance = 500.f; 
 
 		const FVector RawAvoidLoc = MyLocation + AvoidDir * FinalAvoidDistance;
 
 		if (bDebugLog)
 		{
-			LOG_WARNING(TEXT("▶ DangerDirection: %s"), *DangerDirection.ToString());
-			LOG_WARNING(TEXT("▶ 회피 방향(AvoidDir): %s"), *AvoidDir.ToString());
-			LOG_WARNING(TEXT("▶ RawAvoidLoc (Before Projection): %s"), *RawAvoidLoc.ToString());
-			DrawDebugSphere(GetWorld(), RawAvoidLoc, 40.f, 12, FColor::Red, false, 1.0f);
+			LOG_WARNING(TEXT(" DangerDirection : %s"), *DangerDirection.ToString());
+			LOG_WARNING(TEXT(" AvoidDirection : %s"), *AvoidDir.ToString());
+			LOG_WARNING(TEXT(" RawAvoidLoc (Before Projection): %s"), *RawAvoidLoc.ToString());
+			//DrawDebugSphere(GetWorld(), RawAvoidLoc, 40.f, 12, FColor::Red, false, 1.0f);
 		}
 
 		FNavLocation Projected;
@@ -118,8 +115,8 @@ void UBTService_AvoidDanger::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* 
 			NavSys->ProjectPointToNavigation(RawAvoidLoc, Projected, FVector(100.f)))
 		{
 			BlackboardComp->SetValueAsVector(AvoidLocationKey, Projected.Location);
-			LOG_WARNING(TEXT("✅ Projected AvoidLocation: %s"), *Projected.Location.ToString());
-			DrawDebugSphere(GetWorld(), Projected.Location, 30.f, 12, FColor::Green, false, 1.0f);
+			LOG_WARNING(TEXT("Projected AvoidLocation: %s"), *Projected.Location.ToString());
+			//DrawDebugSphere(GetWorld(), Projected.Location, 30.f, 12, FColor::Green, false, 1.0f);
 		}
 		else
 		{
@@ -129,12 +126,12 @@ void UBTService_AvoidDanger::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* 
 			if (NavSys && NavSys->GetRandomReachablePointInRadius(SearchOrigin, 1000.f, RandomSafeLoc))
 			{
 				BlackboardComp->SetValueAsVector(AvoidLocationKey, RandomSafeLoc.Location);
-				LOG_WARNING(TEXT("✅ Fallback SafeLocation: %s"), *RandomSafeLoc.Location.ToString());
-				DrawDebugSphere(GetWorld(), RandomSafeLoc.Location, 30.f, 12, FColor::Blue, false, 1.0f);
+				LOG_WARNING(TEXT("Fallback SafeLocation: %s"), *RandomSafeLoc.Location.ToString());
+				//DrawDebugSphere(GetWorld(), RandomSafeLoc.Location, 30.f, 12, FColor::Blue, false, 1.0f);
 			}
 			else
 			{
-				LOG_WARNING(TEXT("❌ Fallback 탐색 실패 → Danger 해제"));
+				LOG_WARNING(TEXT("Fallback XX -> Danger Clear"));
 				BlackboardComp->ClearValue(AvoidLocationKey);
 				bDangerDetected = false;
 			}
@@ -175,8 +172,8 @@ bool UBTService_AvoidDanger::IsNearNavEdge(const FVector& Location, FVector& Out
 		if (!bOnNav)
 		{
 			OutDirection = FVector(-Dir.X, -Dir.Y, 0.f).GetSafeNormal();
-			LOG_WARNING(TEXT("✅ NavMesh 경계 감지 방향: %s → 회피 방향: %s"), *Dir.ToString(), *OutDirection.ToString());
-			DrawDebugSphere(GetWorld(), TestPoint, 30.f, 12, FColor::Red, false, 2.0f);
+			LOG_WARNING(TEXT("Search NavMesh : %s -> Avoiddirction: %s"), *Dir.ToString(), *OutDirection.ToString());
+			//DrawDebugSphere(GetWorld(), TestPoint, 30.f, 12, FColor::Red, false, 2.0f);
 			return true;
 		}
 	}
@@ -210,7 +207,6 @@ bool UBTService_AvoidDanger::IsNearDeadZones(const FVector& Location, FVector& O
 		{
 			ClosestDist = Dist;
 
-			// ✅ 회피 방향은 XY 평면 기준 (Z는 고정)
 			FVector ZoneFlatLoc = FVector(ZoneLoc.X, ZoneLoc.Y, Location.Z);
 			ClosestDir = ZoneFlatLoc - Location;
 
@@ -219,8 +215,8 @@ bool UBTService_AvoidDanger::IsNearDeadZones(const FVector& Location, FVector& O
 
 			if (bDebugLog)
 			{
-				DrawDebugSphere(GetWorld(), ZoneLoc, 50.f, 12, FColor::Purple, false, 2.0f);
-				LOG_WARNING(TEXT("🟣 DeadZone 감지 위치: %s | 거리: %f"), *ZoneLoc.ToString(), Dist);
+				//DrawDebugSphere(GetWorld(), ZoneLoc, 50.f, 12, FColor::Purple, false, 2.0f);
+				LOG_WARNING(TEXT("DeadZone Location : %s / Distance : %f"), *ZoneLoc.ToString(), Dist);
 			}
 		}
 	}

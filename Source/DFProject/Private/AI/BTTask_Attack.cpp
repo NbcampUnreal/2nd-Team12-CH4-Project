@@ -49,7 +49,7 @@ EBTNodeResult::Type UBTTask_Attack::ExecuteTask(UBehaviorTreeComponent& OwnerCom
 	{
 	case EAI_AILevels::Basic: HeadbuttRate = 0.3f; break;
 	case EAI_AILevels::Expert: HeadbuttRate = 0.4f; break;
-	default: HeadbuttRate = 0.f; break; // Rookie 등
+	default: HeadbuttRate = 0.f; break; 
 	}
 
 	const float RandValue = FMath::FRand();

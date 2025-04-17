@@ -61,33 +61,33 @@ EBTNodeResult::Type UBTTask_ThrowGrabbedTarget::EvaluateAndAttemptThrow(UBehavio
 {
 	if (!MyCharacter)
 	{
-		LOG_WARNING(TEXT("ThrowTask: MyCharacter 없음"));
+		LOG_WARNING(TEXT("ThrowTask: MyCharacter X"));
 		return EBTNodeResult::Failed;
 	}
 
 	if (!TargetCharacter)
 	{
-		LOG_WARNING(TEXT("ThrowTask: GrabTargetCharacter 없음"));
+		LOG_WARNING(TEXT("ThrowTask: GrabTargetCharacter X"));
 		return EBTNodeResult::Failed;
 	}
 
 	if (!TargetCharacter->StateManager || !TargetCharacter->StateManager->CurrentState)
 	{
-		LOG_WARNING(TEXT("ThrowTask: 대상 상태 정보 없음"));
+		LOG_WARNING(TEXT("ThrowTask: State X"));
 		return EBTNodeResult::Failed;
 	}
 
 	const ECharacterStateType TargetState = TargetCharacter->StateManager->CurrentState->GetStateType();
 	if (TargetState != ECharacterStateType::Stunned)
 	{
-		LOG_WARNING(TEXT("ThrowTask: Target 상태가 Stunned 아님"));
+		LOG_WARNING(TEXT("ThrowTask: Target Isnt Stunned "));
 		MyCharacter->Server_ReleaseGrab();
 		MyCharacter->Server_StopGrab();
 		return EBTNodeResult::Failed;
 	}
 
 	MyCharacter->Jump();
-	LOG_WARNING(TEXT("ThrowTask: 점프 실행"));
+	LOG_WARNING(TEXT("ThrowTask: Jump"));
 
 	OwnerCompPtr = &OwnerComp;
 
@@ -103,11 +103,11 @@ EBTNodeResult::Type UBTTask_ThrowGrabbedTarget::EvaluateAndAttemptThrow(UBehavio
 			{
 				const FVector ThrowDir = (TargetCharacter->GetActorLocation() - MyCharacter->GetActorLocation()).GetSafeNormal();
 				Mesh->AddImpulse(ThrowDir * ThrowPower, NAME_None, true);
-				LOG_WARNING(TEXT("ThrowTask: Impulse 적용 완료"));
+				LOG_WARNING(TEXT("ThrowTask: Impulse O"));
 			}
 			else
 			{
-				LOG_WARNING(TEXT("ThrowTask: TargetCharacter Mesh 없음"));
+				LOG_WARNING(TEXT("ThrowTask: TargetCharacter Mesh X"));
 			}
 
 			if (OwnerCompPtr)

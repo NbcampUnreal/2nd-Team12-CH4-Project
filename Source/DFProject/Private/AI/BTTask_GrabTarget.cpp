@@ -51,19 +51,19 @@ EBTNodeResult::Type UBTTask_GrabTarget::EvaluateAndAttemptGrab(UBehaviorTreeComp
 {
 	if (!MyCharacter)
 	{
-		LOG_WARNING(TEXT("GrabTask: MyCharacter 없음"));
+		LOG_WARNING(TEXT("GrabTask: MyCharacter X"));
 		return EBTNodeResult::Failed;
 	}
 
 	if (!TargetCharacter)
 	{
-		LOG_WARNING(TEXT("GrabTask: GrabTargetCharacter 없음"));
+		LOG_WARNING(TEXT("GrabTask: GrabTargetCharacter X"));
 		return EBTNodeResult::Failed;
 	}
 
 	if (!TargetCharacter->StateManager || !TargetCharacter->StateManager->CurrentState)
 	{
-		LOG_WARNING(TEXT("GrabTask: 대상 상태 정보 없음"));
+		LOG_WARNING(TEXT("GrabTask: State X"));
 		return EBTNodeResult::Failed;
 	}
 
@@ -72,7 +72,7 @@ EBTNodeResult::Type UBTTask_GrabTarget::EvaluateAndAttemptGrab(UBehaviorTreeComp
 
 	if (TargetState != ECharacterStateType::Stunned || MyState != ECharacterStateType::Idle)
 	{
-		LOG_WARNING(TEXT("GrabTask: 유효하지 않은 상태 → 대상: %d, 나: %d"), static_cast<int32>(TargetState), static_cast<int32>(MyState));
+		LOG_WARNING(TEXT("GrabTask: XX Target : %d, AI : %d"), static_cast<int32>(TargetState), static_cast<int32>(MyState));
 		MyCharacter->Server_ReleaseGrab();
 		MyCharacter->Server_StopGrab();
 		return EBTNodeResult::Failed;
@@ -81,12 +81,12 @@ EBTNodeResult::Type UBTTask_GrabTarget::EvaluateAndAttemptGrab(UBehaviorTreeComp
 	const float Distance = FVector::Dist2D(MyCharacter->GetActorLocation(), TargetCharacter->GetActorLocation());
 	if (Distance > GrabRange)
 	{
-		LOG_WARNING(TEXT("GrabTask: 거리 초과 → %f / 최대 %f"), Distance, GrabRange);
+		LOG_WARNING(TEXT("GrabTask: DistanceOver -> %f / Max %f"), Distance, GrabRange);
 		return EBTNodeResult::Failed;
 	}
 
 	MyCharacter->Server_StartGrab();
-	LOG_WARNING(TEXT("GrabTask: Grab 시도 성공 → 대상 %s"), *TargetCharacter->GetName());
+	LOG_WARNING(TEXT("GrabTask: Grab OO -> Traget %s"), *TargetCharacter->GetName());
 
 	FTimerDelegate FinishDelegate;
 	OwnerCompPtr = &OwnerComp; 

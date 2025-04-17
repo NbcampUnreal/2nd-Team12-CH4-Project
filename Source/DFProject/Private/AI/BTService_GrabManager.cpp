@@ -51,7 +51,7 @@ void UBTService_GrabManager::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* 
 	{
 		BlackboardComp->ClearValue(GrabTargetActorKey);
 		BlackboardComp->SetValueAsBool(CanGrabKey, false);
-		LOG_WARNING(TEXT("GrabManager: AILevel < Expert → Grab 탐색 스킵"));
+		LOG_WARNING(TEXT("GrabManager: AILevel -> X Expert -> Grab X"));
 		return;
 	}
 

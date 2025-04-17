@@ -91,18 +91,16 @@ void UBTTask_Move::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory
 	const bool bEvading = BlackboardComp->GetValueAsBool(TEXT("IsEvadingGrab"));
 	const bool bAvoiding = BlackboardComp->IsVectorValueSet(TEXT("AvoidLocation"));
 
-	// 회전 속도 조정
-	float RotationSpeed = 10.f; // 기본 회전 속도
-	if (bAvoiding) // DeadZone 회피 중엔 느리게
+	float RotationSpeed = 10.f; 
+	if (bAvoiding) 
 	{
 		RotationSpeed = 1.0f;
 	}
-	else if (bEvading) // Grab 회피 중엔 약간 느리게
+	else if (bEvading) 
 	{
 		RotationSpeed = 10.0f;
 	}
 
-	// 기본적으로 MoveLocation을 향해 회전
 	FVector LookTargetLocation = TargetLocation;
 	FVector Direction = LookTargetLocation - MyCharacter->GetActorLocation();
 	Direction.Z = 0.f;

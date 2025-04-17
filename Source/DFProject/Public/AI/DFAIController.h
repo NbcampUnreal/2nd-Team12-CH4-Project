@@ -35,6 +35,8 @@ protected:
 	void BeginAI(APawn* InPawn);
 	void EndAI();
 
+	//void SetAITeamID(int32 InTeamID);
+
 private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UBlackboardData> BlackboardDataAsset;
@@ -44,6 +46,4 @@ private:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI", Meta = (AllowPrivateAccess = "true"))
 	EAI_AILevels CurrentAILevel;
-
-
 };
