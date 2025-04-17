@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GrabHandler.generated.h"
 
+class UPhysicsConstraintComponent;
 class UGrabComponent;
 
 USTRUCT(BlueprintType)
@@ -42,6 +43,7 @@ class UGrabHandler : public UObject
 {
 	GENERATED_BODY()
 public:
+	
 	void SetOwningGrabComponent(UGrabComponent* GrabComp);
 	bool IsGrabbable(const AActor* Target);
 	
@@ -54,7 +56,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Grab")
 	virtual void ReleaseGrab();
 
-
+	UFUNCTION(BlueprintCallable, Category = "Grab")
+	virtual void OverlapGrabTarget(const FGrabTargetInfo& TargetInfo);
 
 protected:
 	UFUNCTION()
@@ -69,4 +72,5 @@ protected:
 	
 	UPROPERTY()
 	UGrabComponent* OwningGrabComponent;
+
 };

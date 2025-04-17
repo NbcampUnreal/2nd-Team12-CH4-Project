@@ -6,6 +6,8 @@
 #include "Ability/Grab/Grabbable.h"
 #include "Ability/Grab/GrabComponent.h"
 
+
+
 void UGrabHandler::SetOwningGrabComponent(UGrabComponent* GrabComp)
 {
 	OwningGrabComponent = GrabComp;
@@ -23,11 +25,15 @@ bool UGrabHandler::IsGrabbable(const AActor* Target)
 
 void UGrabHandler::ExecuteGrab(const FGrabTargetInfo& TargetInfo)
 {
-	OwningGrabComponent->Grabbed(TargetInfo);
 }
 
 void UGrabHandler::ReleaseGrab()
 {
+}
+
+void UGrabHandler::OverlapGrabTarget(const FGrabTargetInfo& TargetInfo)
+{
+	OwningGrabComponent->Grabbed(TargetInfo);
 }
 
 void UGrabHandler::OnGrabColliderBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
@@ -49,5 +55,5 @@ void UGrabHandler::OnGrabColliderBeginOverlap(UPrimitiveComponent* OverlappedCom
 	TargetInfo.HitLocation = SweepResult.ImpactPoint;
 	TargetInfo.HitNormal = SweepResult.ImpactNormal;
 
-	ExecuteGrab(TargetInfo);
+	OverlapGrabTarget(TargetInfo);
 }

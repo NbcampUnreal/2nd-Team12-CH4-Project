@@ -6,48 +6,30 @@
 #include "Character/DFCharacter.h"
 #include "Character/BodyPart/BodyPart.h"
 #include "PhysicsEngine/PhysicsConstraintComponent.h"
-#include "PhysicsEngine/PhysicsHandleComponent.h"
-
-
-UBodyPartGrabHandler::UBodyPartGrabHandler()
-{
-	GrabConstraint = CreateDefaultSubobject<UPhysicsConstraintComponent>("GrabConstraint");
-	GrabConstraint->ConstraintInstance.SetDisableCollision(true);
-	GrabConstraint->SetLinearXLimit(ELinearConstraintMotion::LCM_Locked, 0.f);
-	GrabConstraint->SetLinearYLimit(ELinearConstraintMotion::LCM_Locked, 0.f);
-	GrabConstraint->SetLinearZLimit(ELinearConstraintMotion::LCM_Locked, 0.f);
-
-	GrabConstraint->SetAngularSwing1Limit(EAngularConstraintMotion::ACM_Locked, 45.f);
-	GrabConstraint->SetAngularSwing2Limit(EAngularConstraintMotion::ACM_Locked, 45.f);
-	GrabConstraint->SetAngularTwistLimit(EAngularConstraintMotion::ACM_Locked, 45.f);
-}
-
-void UBodyPartGrabHandler::BeginDestroy()
-{
-	Super::BeginDestroy();
-
-	if (GrabConstraint)
-	{
-		GrabConstraint->BreakConstraint();
-	}
-}
 
 void UBodyPartGrabHandler::Initialize(ABodyPart* BodyPart)
 {
+	OwningBodyPart = BodyPart;
+	
 	Root = BodyPart->GetRootComponent();
+
 	GrabCollider = BodyPart->GetBodyCollider();
 	GrabCollider->OnComponentBeginOverlap.AddDynamic(this, &UBodyPartGrabHandler::OnGrabColliderBeginOverlap);
+}
 
-	if (GrabConstraint && Root.IsValid())
+void UBodyPartGrabHandler::SetGrabConstraint(UPhysicsConstraintComponent* Constraint)
+{
+	GrabConstraint = Constraint;
+
+	if (GrabConstraint && Root.Get())
 	{
-		GrabConstraint->AttachToComponent(Root.Get(), FAttachmentTransformRules::KeepRelativeTransform);
+		GrabConstraint->AttachToComponent(OwningBodyPart->GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
 	}
-	
 }
 
 void UBodyPartGrabHandler::MoveToTarget(const FVector& TargetLocation)
 {
-	if (!Root.IsValid()) return;
+	if (!Root.Get()) return;
 	FVector Current = Root->GetComponentLocation();
 
 	UPrimitiveComponent* RootPrimitive = Cast<UPrimitiveComponent>(Root);
@@ -55,7 +37,7 @@ void UBodyPartGrabHandler::MoveToTarget(const FVector& TargetLocation)
 	if (RootPrimitive && RootPrimitive->IsSimulatingPhysics())
 	{
 		FVector ForceDirection = (TargetLocation - Current).GetSafeNormal();
-		RootPrimitive->AddForce(ForceDirection * MoveForce);
+		OwningBodyPart->Multicast_AddForce(ForceDirection * MoveForce);
 	}
 }
 
@@ -67,7 +49,6 @@ void UBodyPartGrabHandler::ExecuteGrab(const FGrabTargetInfo& TargetInfo)
 	Super::ExecuteGrab(TargetInfo);
 
 	GrabCollider->IgnoreActorWhenMoving(TargetInfo.TargetActor, true);
-
 	
 	UPrimitiveComponent* TargetRoot = IGrabbable::Execute_GetRoot(TargetInfo.TargetActor);
 

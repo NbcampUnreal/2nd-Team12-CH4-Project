@@ -9,6 +9,8 @@
 
 void UStunnedState::Tick(ADFCharacter* Character, float DeltaTime)
 {
+	//if (!Character->HasAuthority()) return;
+
 	FVector MeshLocation = Character->GetMesh()->GetComponentLocation() - Character->MeshOffset.GetLocation();
 	FVector NewCapsuleLocation = FVector(MeshLocation.X, MeshLocation.Y, MeshLocation.Z);
 	Character->SetActorLocation(NewCapsuleLocation);
@@ -18,11 +20,13 @@ void UStunnedState::Tick(ADFCharacter* Character, float DeltaTime)
 	FRotator TargetRotation = BoneTransform.GetRotation().Rotator() - Character->MeshOffset.Rotator();
 	TargetRotation.Pitch = 0.0f;
 	TargetRotation.Roll = 0.0f;
-	Character->SetActorRotation(TargetRotation);
+	Character->SetActorRotation(TargetRotation); // 여기도 동기화 필요? idle일 때 동기화?
 }
 
 void UStunnedState::Enter(ADFCharacter* Character)
 {
+	//if (!Character->HasAuthority()) return;
+	
 	Character->GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	
 	auto SMesh = Character->GetMesh();

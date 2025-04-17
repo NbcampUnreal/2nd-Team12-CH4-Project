@@ -18,14 +18,13 @@ class DFPROJECT_API UBodyPartGrabHandler : public UGrabHandler
 {
 	GENERATED_BODY()
 public:
-	UBodyPartGrabHandler();
-
-	virtual void BeginDestroy() override;
-
 	void Initialize(ABodyPart* BodyPart);
+	void SetGrabConstraint(UPhysicsConstraintComponent* Constraint);
 
 	virtual void MoveToTarget(const FVector& TargetLocation) override;
+	
 	virtual void ExecuteGrab(const FGrabTargetInfo& TargetInfo) override;
+
 	virtual void ReleaseGrab() override;
 	
 protected:
@@ -34,14 +33,19 @@ protected:
 	TWeakObjectPtr<USceneComponent> Root;
 
 	UPROPERTY()
+	TWeakObjectPtr<ABodyPart> OwningBodyPart;
+
+	UPROPERTY()
 	TWeakObjectPtr<USphereComponent> GrabCollider;
 
 	UPROPERTY()
 	TObjectPtr<UPhysicsConstraintComponent> GrabConstraint;
 	
 	UPROPERTY(EditAnywhere, Category = "Grab")
-	float MoveForce = 500000.f;
+	float MoveForce = 100000.f;
 	
 	UPROPERTY()
 	AActor* CurrentGrabTarget;
 };
+
+

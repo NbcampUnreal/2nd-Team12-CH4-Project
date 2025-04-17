@@ -24,7 +24,8 @@ enum class EBodyPartType : uint8
 	Head,
 	Body,
 	LeftFoot,
-	RightFoot
+	RightFoot,
+	MAX UMETA(Hidden)
 };
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
@@ -41,8 +42,13 @@ protected:
 public:
 	UFUNCTION(BlueprintCallable, NetMulticast, Reliable, Category="BodyPart")
 	virtual void Attach(ACharacter* TargetCharacter, const UAttachInfoComponent* AttachInfo);
+
+	virtual void Tick(float DeltaTime) override;
+
+	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 	
 	TObjectPtr<USphereComponent> GetBodyCollider();
+	
 	TObjectPtr<ACharacter> GetOwningCharacter();
 
 	virtual AActor* GetActualTarget_Implementation() override;
@@ -61,6 +67,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, NetMulticast, Reliable, Category="BodyPart")
 	void Multicast_AddImpulse(const FVector& Impulse);
+	
+	UFUNCTION(BlueprintCallable, NetMulticast, Reliable, Category="BodyPart")
+	void Multicast_AddForce(const FVector& Force);
 protected:	
 	FTransform GetOffsetTransform(const ACharacter* TargetCharacter, const UAttachInfoComponent* AttachInfo);
 
@@ -77,4 +86,17 @@ protected:
 
 	UPROPERTY()
 	TObjectPtr<ACharacter> OwningCharacter;
+
+	UPROPERTY(ReplicatedUsing = OnRep_TargetTransform)
+	FTransform ReplicatedTransform;
+
+	UFUNCTION()
+	void OnRep_TargetTransform();
+
+	FVector TargetLocation;
+	FQuat TargetRotation;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Interp")
+	float InterpSpeed = 10.f;
+	float TimeSinceLastUpdate = 0.0f;
+	float UpdateInterval = 0.1f; // 10fps 정도로 전송
 };

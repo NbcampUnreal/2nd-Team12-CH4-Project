@@ -7,6 +7,8 @@
 
 void URecoverState::Tick(ADFCharacter* Character, float DeltaTime)
 {
+	//if (!Character->HasAuthority()) return;
+	
 	FVector MeshLocation = Character->GetMesh()->GetComponentLocation() - Character->MeshOffset.GetLocation();
 	FVector NewCapsuleLocation = FVector(MeshLocation.X, MeshLocation.Y, MeshLocation.Z);
 	Character->SetActorLocation(NewCapsuleLocation);

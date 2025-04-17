@@ -7,7 +7,8 @@
 #include "Components/ActorComponent.h"
 #include "GrabComponent.generated.h"
 
-class UGrabHandler;
+enum class EBodyPartType : uint8;
+class UBodyPartGrabHandler;
 class UPhysicsConstraintComponent;
 class IGrabHandler;
 class ABodyPart;
@@ -38,7 +39,7 @@ class DFPROJECT_API UGrabComponent : public UActorComponent
 
 public:
 	UGrabComponent();
-
+	
 	virtual void BeginPlay() override;
 
 	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
@@ -49,11 +50,18 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "GrabEvents") // 대상이 잡힐 때 호출됨.
 	void Grabbed(const FGrabTargetInfo& Info);
-
+	
+	UFUNCTION(BlueprintCallable, NetMulticast, Reliable, Category = "GrabEvents") // 대상이 잡힐 때 호출됨.
+	void Multicast_Grabbed(const FGrabTargetInfo& Info);
+	
 	UFUNCTION(BlueprintCallable, Category = "GrabEvents") // 대상을 놓을 때 호출해야함.
 	void Released();
 
-	void SetGrabHandler(TObjectPtr<UGrabHandler> InGrabHandler);
+	UFUNCTION(BlueprintCallable, NetMulticast, Reliable, Category = "GrabEvents") // 대상이 잡힐 때 호출됨.
+	void Multicast_Released();
+
+	UFUNCTION(NetMulticast, Reliable, Category = "GrabEvents")
+	void InitializeGrabHandler(EBodyPartType Type);
 
 	void SetGrabState(EGrabState NewState);
 
@@ -70,7 +78,10 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "GrabEvents")
 	FOnGrabFailed OnGrabFailed;
 
-	
+	bool HasValidHandler() const;
+
+	UBodyPartGrabHandler* GetGrabHandler() const;
+	void CreateHandler(ABodyPart* BodyPart);
 protected:
 	void DetectClosestGrabbable();
 	
@@ -89,8 +100,8 @@ protected:
 	FVector CurrentTargetLocation;
 	
 	UPROPERTY()
-	TObjectPtr<UGrabHandler> GrabHandler;
-	
+	TObjectPtr<UBodyPartGrabHandler> GrabHandler;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	float DetectionRadius = 100;
 	
@@ -103,7 +114,7 @@ protected:
 	EGrabState CurrentState = EGrabState::Idle;
 
 	FGrabTargetInfo GrabbedTargetInfo;
+
+	TObjectPtr<UPhysicsConstraintComponent> GrabConstraint;
 };
-
-
 

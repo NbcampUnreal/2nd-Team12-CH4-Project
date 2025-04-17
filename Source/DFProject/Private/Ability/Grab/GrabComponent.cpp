@@ -3,9 +3,11 @@
 
 #include "Ability/Grab/GrabComponent.h"
 
+#include "Ability/Grab/BodyPartGrabHandler.h"
 #include "Ability/Grab/Grabbable.h"
 #include "Ability/Grab/GrabHandler.h"
-#include "Character/MovementModifierComponent.h"
+#include "Character/DFCharacter.h"
+#include "Character/BodyPart/BodyPart.h"
 #include "PhysicsEngine/PhysicsConstraintComponent.h"
 
 // Sets default values for this component's properties
@@ -15,13 +17,23 @@ UGrabComponent::UGrabComponent()
 	PrimaryComponentTick.bStartWithTickEnabled = true; // 시작 시 Tick 활성화
 
 	bAutoActivate = true; // 자동 활성화
-}
+	
+	GrabConstraint = CreateDefaultSubobject<UPhysicsConstraintComponent>(TEXT("GrabConstraint"));
+	GrabConstraint->ConstraintInstance.SetDisableCollision(true);
+	GrabConstraint->SetLinearXLimit(ELinearConstraintMotion::LCM_Locked, 0.f);
+	GrabConstraint->SetLinearYLimit(ELinearConstraintMotion::LCM_Locked, 0.f);
+	GrabConstraint->SetLinearZLimit(ELinearConstraintMotion::LCM_Locked, 0.f);
 
+	GrabConstraint->SetAngularSwing1Limit(EAngularConstraintMotion::ACM_Limited, 60.f);
+	GrabConstraint->SetAngularSwing2Limit(EAngularConstraintMotion::ACM_Limited, 60.f);
+	GrabConstraint->SetAngularTwistLimit(EAngularConstraintMotion::ACM_Limited, 45.f);
+}
 
 // Called when the game starts
 void UGrabComponent::BeginPlay()
 {
 	Super::BeginPlay();
+	SetIsReplicated(true);
 }
 
 void UGrabComponent::TickComponent(float DeltaTime, enum ELevelTick TickType,
@@ -40,8 +52,6 @@ void UGrabComponent::TickComponent(float DeltaTime, enum ELevelTick TickType,
 		if (CurrentTarget && GrabHandler)
 		{
 			GrabHandler->MoveToTarget(CurrentTargetLocation); // 이동 상태로 진행
-			// 타겟이 잡히면 Grabbing 상태로 전환
-			//SetGrabState(EGrabState::Grabbing);
 		}
 		break;
 
@@ -51,6 +61,36 @@ void UGrabComponent::TickComponent(float DeltaTime, enum ELevelTick TickType,
 	default:
 		break;
 	}
+}
+
+bool UGrabComponent::HasValidHandler() const
+{
+	return GrabHandler != nullptr;
+}
+
+UBodyPartGrabHandler* UGrabComponent::GetGrabHandler() const
+{
+	return GrabHandler;
+}
+
+void UGrabComponent::CreateHandler(ABodyPart* BodyPart)
+{
+	if (BodyPart == nullptr)
+	{
+		UE_LOG(LogDamaged, Warning, TEXT("BodyPart is nullptr!"));
+		return;
+	}
+	GrabHandler = NewObject<UBodyPartGrabHandler>(this);
+
+	if (GrabHandler == nullptr)
+	{
+		UE_LOG(LogDamaged, Warning, TEXT("GrabHandler creation failed!"));
+		return;
+	}
+	GrabHandler->Initialize(BodyPart);
+	GrabHandler->SetOwningGrabComponent(this);
+	GrabHandler->SetGrabConstraint(GrabConstraint);
+	
 }
 
 void UGrabComponent::DetectClosestGrabbable()
@@ -127,7 +167,6 @@ void UGrabComponent::DetectClosestGrabbable()
 	}
 
 	CurrentTarget = ClosestActor; // 가장 가까운 액터를 현재 타겟으로 설정
-
 
 #if WITH_EDITOR // 디버그용. 구로 Sweep 하면 캡슐이니 캡슐로 표시함.
 	FVector SweepCenter = (Start + End) * 0.5f;
@@ -219,12 +258,29 @@ FVector UGrabComponent::ComputeDetectionEnd() const
 
 void UGrabComponent::Grabbed(const FGrabTargetInfo& Info)
 {
+	if (Info.TargetActor == nullptr) return;
+	
 	SetGrabState(EGrabState::Grabbing);
 	GrabbedTargetInfo = Info;
 	OnGrabbed.Broadcast(GrabbedTargetInfo);
+
+	if (GetOwner()->HasAuthority()) Multicast_Grabbed(Info);
 	
 	IGrabbable::Execute_OnGrabbed(GetOwner(), Info.TargetActor);
 	IGrabbable::Execute_OnGrabbedBy(Info.TargetActor, GetOwner());
+}
+
+void UGrabComponent::Multicast_Grabbed_Implementation(const FGrabTargetInfo& Info)
+{
+	if (GrabHandler)
+	{
+		GrabHandler->ExecuteGrab(Info);
+	}
+}
+
+void UGrabComponent::InitializeGrabHandler_Implementation(EBodyPartType Type)
+{
+	if (!GetOwner()) return;
 }
 
 void UGrabComponent::Released()
@@ -238,14 +294,14 @@ void UGrabComponent::Released()
 	
 	OnGrabRelease.Broadcast(GrabbedTargetInfo);
 	
+	if (GetOwner()->HasAuthority()) Multicast_Released();
+}
+
+void UGrabComponent::Multicast_Released_Implementation()
+{
 	GrabbedTargetInfo = {};
 	if (GrabHandler)
 	{
 		GrabHandler->ReleaseGrab();
 	}
-}
-
-void UGrabComponent::SetGrabHandler(TObjectPtr<UGrabHandler> InGrabHandler)
-{
-	GrabHandler = InGrabHandler;
 }

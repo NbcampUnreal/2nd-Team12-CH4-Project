@@ -6,12 +6,13 @@
 #include "Character/BodyPart/AttachInfoComponent.h"
 #include "Components/SphereComponent.h"
 #include "GameFramework/Character.h"
+#include "Net/UnrealNetwork.h"
 #include "PhysicsEngine/PhysicsConstraintComponent.h"
 
 // Sets default values
 ABodyPart::ABodyPart()
 {
-	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = true;
 	BodyCollider = CreateDefaultSubobject<USphereComponent>(TEXT("BodyCollider"));
 	SetRootComponent(BodyCollider);
 	BodyCollider->SetCollisionProfileName(TEXT("BodyPart"));
@@ -25,7 +26,7 @@ ABodyPart::ABodyPart()
 	BoneConstraint->SetDisableCollision(true);
 
 	SetReplicates(true);
-	SetReplicateMovement(true);
+	SetReplicateMovement(false);
 	BodyCollider->SetIsReplicated(true);
 	BoneConstraint->SetIsReplicated(true);
 }
@@ -96,6 +97,40 @@ FTransform ABodyPart::GetOffsetTransform(const ACharacter* TargetCharacter, cons
 	return AttachInfoTransform.GetRelativeTransform(BoneWorldTransform);
 }
 
+void ABodyPart::OnRep_TargetTransform()
+{
+	TargetLocation = ReplicatedTransform.GetLocation();
+	TargetLocation = ReplicatedTransform.GetLocation();
+}
+
+void ABodyPart::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	//if (HasAuthority())
+	//{
+	//	TimeSinceLastUpdate += DeltaTime;
+	//	if (TimeSinceLastUpdate >= UpdateInterval) // 예: 0.1초 간격
+	//	{
+	//		ReplicatedTransform = GetActorTransform();
+	//		TimeSinceLastUpdate = 0.0f;
+	//	}
+	//}
+	//else
+	//{
+	//	FVector NewLoc = FMath::VInterpTo(GetActorLocation(), TargetLocation, DeltaTime, InterpSpeed);
+	//	FQuat NewRot = FMath::QInterpTo(GetActorQuat(), TargetRotation, DeltaTime, InterpSpeed);
+//
+	//	SetActorLocationAndRotation(NewLoc, NewRot, false, nullptr, ETeleportType::TeleportPhysics);
+	//}
+}
+
+void ABodyPart::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(ABodyPart, ReplicatedTransform);
+}
+
 TObjectPtr<USphereComponent> ABodyPart::GetBodyCollider()
 {
 	return BodyCollider;
@@ -162,3 +197,7 @@ void ABodyPart::Multicast_AddImpulse_Implementation(const FVector& Impulse)
 	BodyCollider->AddImpulse(Impulse, NAME_None, true);
 }
 
+void ABodyPart::Multicast_AddForce_Implementation(const FVector& Force)
+{
+	BodyCollider->AddForce(Force, NAME_None, true);
+}

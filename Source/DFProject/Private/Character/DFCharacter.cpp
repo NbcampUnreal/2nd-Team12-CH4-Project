@@ -4,7 +4,6 @@
 #include "Character/DFCharacter.h"
 
 #include "EnhancedInputComponent.h"
-#include "Ability/Grab/BodyPartGrabHandler.h"
 #include "Ability/Grab/GrabComponent.h"
 #include "Ability/Strategy/AbilityStrategyManager.h"
 #include "Camera/CameraComponent.h"
@@ -20,6 +19,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "PhysicsEngine/PhysicalAnimationComponent.h"
 #include "DirGravity/Public/GravityMovementComponent.h"
+#include "Net/UnrealNetwork.h"
 
 DEFINE_LOG_CATEGORY(LogDamaged);
 DEFINE_LOG_CATEGORY(LogInitialize);
@@ -51,6 +51,7 @@ ADFCharacter::ADFCharacter(const FObjectInitializer& ObjectInitializer)
 	LeftGrabComp = CreateDefaultSubobject<UGrabComponent>(TEXT("LeftGrab"));
 	
 	RightGrabComp = CreateDefaultSubobject<UGrabComponent>(TEXT("RightGrab"));
+	
 
 	MovementModifier = CreateDefaultSubobject<UMovementModifierComponent>(TEXT("MovementModifier"));
 
@@ -64,12 +65,13 @@ ADFCharacter::ADFCharacter(const FObjectInitializer& ObjectInitializer)
 void ADFCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-
-	UE_LOG(LogTemp, Warning, TEXT("Current MovementComponent: %s"), *GetCharacterMovement()->GetClass()->GetName());
-	//UpdateSpringArmOrientation();
+	
 	MeshOffset = GetMesh()->GetRelativeTransform();
 
 	GetMesh()->bPauseAnims = true;
+
+	BodyParts.Empty();
+	BodyParts.SetNum(static_cast<int32>(EBodyPartType::MAX));
 }
 
 void ADFCharacter::Tick(float DeltaTime)
@@ -169,6 +171,22 @@ void ADFCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 	);
 }
 
+void ADFCharacter::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(ADFCharacter, LeftFist);
+	DOREPLIFETIME(ADFCharacter, RightFist);
+}
+
+ABodyPart* ADFCharacter::GetBodyPart(EBodyPartType Type)
+{
+	if (BodyParts.IsValidIndex(static_cast<int32>(Type)))
+	{
+		return BodyParts[static_cast<int32>(Type)];
+	}
+	return nullptr;
+}
+
 bool ADFCharacter::EventOnDestroy()
 {
 	if (RightGrabComp) RightGrabComp->Released();
@@ -184,8 +202,12 @@ UGravityMovementComponent* ADFCharacter::GetGravityMovementComponent()
 
 void ADFCharacter::ReadyToPlay()
 {
-	RegisterAbilities();
-	SpawnBodyParts();
+	if (HasAuthority())
+	{
+		RegisterAbilities();
+		SpawnBodyParts();
+	}
+		
 	Multicast_ReadyToPlay();
 }
 
@@ -194,12 +216,11 @@ void ADFCharacter::Multicast_ReadyToPlay_Implementation()
 	ApplyPhysicalAnimationSettings();
 	GetMesh()->bPauseAnims = false;
 	StateManager->SetState(NewObject<UIdleState>(this));
+	//StateManager->SetState(NewObject<UIdleState>(this));
 }
 
 void ADFCharacter::SpawnBodyParts()
 {
-	if (!HasAuthority()) return; //서버에선 바디파츠 생성. 바디파츠는 복제됨
-	
 	TArray<UAttachInfoComponent*> AttachInfos;
 	GetComponents<UAttachInfoComponent>(AttachInfos);
 
@@ -215,34 +236,15 @@ void ADFCharacter::SpawnBodyParts()
 
 		SpawnedPart->SetReplicates(true);
 		SpawnedPart->Attach(this, Info);
-
-		BodyParts.Add(Info->BodyPartType, SpawnedPart);
+		
+		BodyParts[static_cast<int32>(Info->BodyPartType)] = SpawnedPart;
 	}
 
-	if (LeftGrabComp && BodyParts.Contains(EBodyPartType::LeftFist))
-	{
-		UBodyPartGrabHandler* LeftHandler = NewObject<UBodyPartGrabHandler>();
-		LeftHandler->SetOwningGrabComponent(LeftGrabComp);
-		LeftHandler->Initialize(BodyParts[EBodyPartType::LeftFist]);
-		LeftGrabComp->SetGrabHandler(LeftHandler);
-	}
-	else
-	{
-		UE_LOG(LogInitialize, Warning, TEXT("Grab Components not initialized."));
-	}
+	LeftFist = BodyParts[static_cast<int32>(EBodyPartType::LeftFist)];
+	RightFist = BodyParts[static_cast<int32>(EBodyPartType::RightFist)];
 
-	// 오른손 핸들러 생성 및 연결
-	if (RightGrabComp && BodyParts.Contains(EBodyPartType::RightFist))
-	{
-		UBodyPartGrabHandler* RightHandler = NewObject<UBodyPartGrabHandler>();
-		RightHandler->SetOwningGrabComponent(RightGrabComp);
-		RightHandler->Initialize(BodyParts[EBodyPartType::RightFist]);
-		RightGrabComp->SetGrabHandler(RightHandler);
-	}
-	else
-	{
-		UE_LOG(LogInitialize, Warning, TEXT("Grab Components not initialized."));
-	}
+	OnRep_LeftFist();
+	OnRep_RightFist();
 }
 
 void ADFCharacter::ApplyPhysicalAnimationSettings()
@@ -276,6 +278,8 @@ void ADFCharacter::UpdateSpringArmOrientation()
 
 void ADFCharacter::Initialize()
 {
+	if (!HasAuthority()) return;
+	
 	RegisterAbilities();
 	
 	HP = MaxHP;
@@ -357,23 +361,13 @@ void ADFCharacter::Look(const FInputActionValue& Value)
 	if (!SpringArm) return;
 	
 	FRotator CurrentRotation = SpringArm->GetRelativeRotation();
+	
 	if (LookValue.X != 0.0f)
 	{
 		CurrentRotation.Yaw += LookValue.X;
 	}
 	
 	SpringArm->SetRelativeRotation(CurrentRotation);
-
-	//const FVector2D LookValue = Value.Get<FVector2D>();
-	//if (!SpringArm) return;
-//
-	//// 누적 Yaw 입력만 처리 (Pitch는 고정)
-	//if (LookValue.X != 0.0f)
-	//{
-	//	SpringYaw += LookValue.X;
-	//}
-//
-	//UpdateSpringArmOrientation();
 }
 
 
@@ -386,7 +380,8 @@ void ADFCharacter::Server_StartGrab_Implementation()
 {
 	if (!StateManager->IsCurrentState(ECharacterStateType::Idle)) return;
 
-	if (!BodyParts.Contains(EBodyPartType::LeftFist) || !BodyParts.Contains(EBodyPartType::RightFist)) return;
+	if (!BodyParts[static_cast<int32>(EBodyPartType::LeftFist)] ||
+		!BodyParts[static_cast<int32>(EBodyPartType::RightFist)]) return;
 	
 	if (LeftGrabComp && LeftGrabComp->GetCurrentGrabState() != EGrabState::Grabbing)
 	{
@@ -399,11 +394,6 @@ void ADFCharacter::Server_StartGrab_Implementation()
 	}
 }
 
-void ADFCharacter::StopGrab(const FInputActionValue& Value)
-{
-	Server_StopGrab();
-}
-
 void ADFCharacter::ReleaseGrab(const FInputActionValue& Value)
 {
 	Server_ReleaseGrab();
@@ -411,7 +401,8 @@ void ADFCharacter::ReleaseGrab(const FInputActionValue& Value)
 
 void ADFCharacter::Server_ReleaseGrab_Implementation()
 {
-	if (!BodyParts.Contains(EBodyPartType::LeftFist) || !BodyParts.Contains(EBodyPartType::RightFist)) return;
+	if (!BodyParts[static_cast<int32>(EBodyPartType::LeftFist)] ||
+		!BodyParts[static_cast<int32>(EBodyPartType::RightFist)]) return;
 
 	if (LeftGrabComp && LeftGrabComp->GetCurrentGrabState() == EGrabState::Grabbing)
 	{
@@ -427,11 +418,15 @@ void ADFCharacter::Server_ReleaseGrab_Implementation()
 		StateManager->SetState(NewObject<UIdleState>(this));
 }
 
+void ADFCharacter::StopGrab(const FInputActionValue& Value)
+{
+	Server_StopGrab();
+}
+
 void ADFCharacter::Server_StopGrab_Implementation()
 {
-	//if (StateManager->IsCurrentState(ECharacterStateType::Stunned)) return;
-
-	if (!BodyParts.Contains(EBodyPartType::LeftFist) || !BodyParts.Contains(EBodyPartType::RightFist)) return;
+	if (!BodyParts[static_cast<int32>(EBodyPartType::LeftFist)] ||
+		!BodyParts[static_cast<int32>(EBodyPartType::RightFist)]) return;
 	
 	if (LeftGrabComp && LeftGrabComp->GetCurrentGrabState() != EGrabState::Grabbing) LeftGrabComp->StopGrab();
 
@@ -447,9 +442,9 @@ void ADFCharacter::Server_Headbutt_Implementation()
 {
 	if (StateManager->IsCurrentState(ECharacterStateType::Stunned)) return;
 	
-	if (!BodyParts.Contains(EBodyPartType::Head) || !BodyParts[EBodyPartType::Head]) return;
+	if (!BodyParts[static_cast<int32>(EBodyPartType::Head)] || !BodyParts[static_cast<int32>(EBodyPartType::Head)]) return;
 	
-	AbilityManager->StartAbility(TEXT("Headbutt"), BodyParts[EBodyPartType::Head]);
+	AbilityManager->StartAbility(TEXT("Headbutt"), BodyParts[static_cast<int32>(EBodyPartType::Head)]);
 }
 
 
@@ -478,9 +473,10 @@ void ADFCharacter::Server_Punch_Implementation()
 {
 	if (!StateManager->IsCurrentState(ECharacterStateType::Idle)) return;
 	
-	if (!BodyParts.Contains(EBodyPartType::LeftFist) || !BodyParts.Contains(EBodyPartType::RightFist)) return;
+	if (!BodyParts[static_cast<int32>(EBodyPartType::LeftFist)]||
+		!BodyParts[static_cast<int32>(EBodyPartType::RightFist)]) return;
 
-	ABodyPart* Fist = bLeft ? BodyParts[EBodyPartType::LeftFist] : BodyParts[EBodyPartType::RightFist];
+	ABodyPart* Fist = bLeft ? BodyParts[static_cast<int32>(EBodyPartType::LeftFist)] : BodyParts[static_cast<int32>(EBodyPartType::RightFist)];
 	FName AbilityName = bLeft ? TEXT("LeftPunch") : TEXT("RightPunch");
 	
 	if (!Fist) return;
@@ -640,4 +636,46 @@ void ADFCharacter::OnGrabReleasedBy_Implementation(AActor* Grabber)
 UPrimitiveComponent* ADFCharacter::GetRoot_Implementation()
 {
 	return GetMesh();
+}
+
+void ADFCharacter::OnRep_LeftFist()
+{
+	if (LeftGrabComp && LeftFist)
+	{
+		LeftGrabComp->CreateHandler(LeftFist);
+		
+		FTimerHandle LambdaHandle;
+
+		GetWorld()->GetTimerManager().SetTimer(
+			LambdaHandle,
+			FTimerDelegate::CreateLambda([this]()
+			{
+				// 여기에 딜레이 후 실행할 코드 작성
+				UE_LOG(LogTemp, Warning, TEXT("딜레이 후 실행됨!"));
+			}),
+			3.0f,
+			false
+		);
+	}
+}
+
+void ADFCharacter::OnRep_RightFist()
+{
+	if (RightGrabComp && RightFist)
+	{
+		RightGrabComp->CreateHandler(RightFist);
+
+		FTimerHandle LambdaHandle;
+
+		GetWorld()->GetTimerManager().SetTimer(
+			LambdaHandle,
+			FTimerDelegate::CreateLambda([this]()
+			{
+				// 여기에 딜레이 후 실행할 코드 작성
+				UE_LOG(LogTemp, Warning, TEXT("딜레이 후 실행됨!"));
+			}),
+			3.0f,
+			false
+		);
+	}
 }

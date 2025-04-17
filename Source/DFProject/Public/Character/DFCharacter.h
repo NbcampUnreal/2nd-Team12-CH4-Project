@@ -8,6 +8,8 @@
 #include "PhysicsEngine/PhysicalAnimationComponent.h"
 #include "DFCharacter.generated.h"
 
+class UDFPoseableMeshComponent;
+class UPoseableMeshComponent;
 class UGravityMovementComponent;
 class UAbilityStrategyManager;
 class UCharacterStateManager;
@@ -40,6 +42,10 @@ protected:
 public:
 	
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
+
+	ABodyPart* GetBodyPart(EBodyPartType Type);
 	
 	bool EventOnDestroy();
 
@@ -60,6 +66,7 @@ public:
 	void ApplyPhysicalAnimationSettings();
 
 	void RegisterAbilities();
+
 
 	UFUNCTION(BlueprintCallable, Category="Respawn")
 	void Initialize();
@@ -191,11 +198,20 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category=PhysicalAnimation)
 	FName PhysicalAnimStartBone = TEXT("Hips");
 
-	// 복제된 바디파츠를 클라가 직접 접근할 필요가 없기에 몰라도 된다.
-	// 바디파츠에 접근하는건 서버 로직에서만 해도 충분
-	UPROPERTY()
-	TMap<EBodyPartType, ABodyPart*> BodyParts;
+	TArray<ABodyPart*> BodyParts;
 
+	UPROPERTY(ReplicatedUsing=OnRep_LeftFist)
+	ABodyPart* LeftFist;
+
+	UPROPERTY(ReplicatedUsing=OnRep_RightFist)
+	ABodyPart* RightFist;
+
+	UFUNCTION()
+	void OnRep_LeftFist();
+
+	UFUNCTION()
+	void OnRep_RightFist();
+	
 	// 바디 파츠 붙일 때 사용하는 변수. 클라는 복제된 값을 사용하기에 몰라도 된다.
 	UPROPERTY()
 	FTransform MeshOffset;
