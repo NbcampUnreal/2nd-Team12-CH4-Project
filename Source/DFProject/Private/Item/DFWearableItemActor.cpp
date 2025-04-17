@@ -19,14 +19,14 @@ void ADFWearableItemActor::SetActor(UDFWearableItem* ItemDataToShow)
 		return;
 	}
 
-	ItemData = ItemDataToShow;
-	FName SocketName = ItemData->EquipSocketName;
+	WearableItemData = ItemDataToShow;
+	FName SocketName = WearableItemData->EquipSocketName;
 
-	ItemMesh->SetSkeletalMesh(ItemData->ItemMesh);
+	ItemMesh->SetSkeletalMesh(WearableItemData->ItemMesh);
 	ItemMesh->AttachToComponent(PreviewMesh, FAttachmentTransformRules::SnapToTargetIncludingScale, SocketName);
 	ItemMesh->SetCollisionProfileName(TEXT("Item"));
 
-	if (ItemData->ItemType == EItemType::Fabric)
+	if (WearableItemData->ItemType == EItemType::Fabric)
 	{
 		ItemMesh->SetAllBodiesBelowSimulatePhysics(TEXT("FabricBone"), true, true);
 		ItemMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);

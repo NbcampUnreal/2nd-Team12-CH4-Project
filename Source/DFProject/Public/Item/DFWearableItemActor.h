@@ -21,7 +21,7 @@ public:
 	USkeletalMeshComponent* PreviewMesh;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item | ShopItemSpawner")
-	UDFWearableItem* ItemData;
+	UDFWearableItem* WearableItemData;
 
 	UFUNCTION(BlueprintCallable, Category = "Item | ShopItemSpawner")
 	void SetActor(UDFWearableItem* ItemDataToShow);
