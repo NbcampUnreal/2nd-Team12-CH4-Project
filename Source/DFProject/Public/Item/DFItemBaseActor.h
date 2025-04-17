@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Item/DFItemSpawner.h"
+#include "Ability/Grab/Grabbable.h"
 #include "DFItemBaseActor.generated.h"
 
 //class UDFItemInstance;
@@ -14,7 +15,7 @@ class UPhysicalAnimationComponent;
 class UAbilityStrategy;
 
 UCLASS()
-class DFPROJECT_API ADFItemBaseActor : public AActor
+class DFPROJECT_API ADFItemBaseActor : public AActor , public IGrabbable
 {
 	GENERATED_BODY()
 	
@@ -68,6 +69,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Item")
 	TSubclassOf<UAbilityStrategy> GetCharacterAbility() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Item")
+	virtual FText GetItemName() const;
 
 	virtual void SetupItem(const FItemInstanceData& InData);
 

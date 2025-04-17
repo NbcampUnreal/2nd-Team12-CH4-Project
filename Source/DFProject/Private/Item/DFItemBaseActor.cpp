@@ -157,3 +157,8 @@ TSubclassOf<UAbilityStrategy> ADFItemBaseActor::GetCharacterAbility() const
 {
 	return OwnerCharacterAbility;
 }
+
+FText ADFItemBaseActor::GetItemName() const
+{
+	return FText();
+}
