@@ -31,14 +31,6 @@ public:
     // 플레이어 종료 시 자동 호출됨
     virtual void Logout(AController* Exiting) override;
 
-    // 캐릭터 선택 완료 후 호출 (UI에서 버튼 클릭 등으로 호출)
-    UFUNCTION(BlueprintCallable, Category = "Menu")
-    void OnCharacterSelectionComplete(int32 SelectedCharacterIndex, int32 SelectedCPUCount);
-
-    // 플레이어에게 팀을 할당하는 함수
-    UFUNCTION(BlueprintCallable, Category = "Menu")
-    void AssignTeam(APlayerController* PlayerController, int32 TeamID);
-
     // 세션 관련 추가 변수 (옵션)
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Session")
     int32 MaxPlayers;

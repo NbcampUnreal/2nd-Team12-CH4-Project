@@ -1,14 +1,14 @@
-#include "Server/DFLobbyGameMode.h"
+ï»¿#include "Server/DFLobbyGameMode.h"
 #include "Server/DFMenuController.h"
+#include "Server/DFGameInstance.h"
 #include "Character/DFPlayerState.h"
 
 ADFLobbyGameMode::ADFLobbyGameMode()
 	: NextSlotIndex(0)
 {
-	// PlayerStateClass, PlayerControllerClass µîÀ» ¿©±â¼­ ÁöÁ¤ÇØµµ µË´Ï´Ù.
+	// PlayerStateClass, PlayerControllerClass ë“±ì„ ì—¬ê¸°ì„œ ì§€ì •í•´ë„ ë©ë‹ˆë‹¤.
 	PlayerStateClass = ADFPlayerState::StaticClass();
 }
-
 void ADFLobbyGameMode::PostLogin(APlayerController* NewPlayer)
 {
 
@@ -16,7 +16,7 @@ void ADFLobbyGameMode::PostLogin(APlayerController* NewPlayer)
 
     if (ADFPlayerState* PS = Cast<ADFPlayerState>(NewPlayer->PlayerState))
     {
-        // ¾ÆÁ÷ ½½·ÔÀÌ ¾È Á¤ÇØÁ® ÀÖ´Ù¸é (UI¿¡¼­ ¾È °í¸¥ °æ¿ì¿¡¸¸)
+        // ì•„ì§ ìŠ¬ë¡¯ì´ ì•ˆ ì •í•´ì ¸ ìˆë‹¤ë©´ (UIì—ì„œ ì•ˆ ê³ ë¥¸ ê²½ìš°ì—ë§Œ)
         if (PS->SlotIndex == INDEX_NONE)
         {
             PS->SlotIndex = NextSlotIndex++;

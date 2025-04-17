@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
@@ -12,11 +12,11 @@ class DFPROJECT_API ADFLobbyGameMode : public AGameModeBase
 public:
 	ADFLobbyGameMode();
 
-	// AGameModeBase ÀÎÅÍÆäÀÌ½º
+	// AGameModeBase ì¸í„°í˜ì´ìŠ¤
 	virtual void PostLogin(APlayerController* NewPlayer) override;
 
 protected:
-	// »õ·Î Á¢¼ÓÇÑ ÇÃ·¹ÀÌ¾î¿¡°Ô ÁÙ ½½·Ô ÀÎµ¦½º
+	// ìƒˆë¡œ ì ‘ì†í•œ í”Œë ˆì´ì–´ì—ê²Œ ì¤„ ìŠ¬ë¡¯ ì¸ë±ìŠ¤
 	int32 NextSlotIndex;
 	
 };
