@@ -26,7 +26,7 @@ void UIdleState::Enter(ADFCharacter* Character)
 	SMesh->bPauseAnims = false;
 	
 	Character->MovementModifier->bApplyGrabResistance = true;
-	Character->SetAllBonesMass(5.0f);
+	Character->SetAllBonesMass(1.0f);
 }
 
 bool UIdleState::CanChangeToState(ECharacterStateType NewState)

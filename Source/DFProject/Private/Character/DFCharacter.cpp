@@ -54,14 +54,16 @@ ADFCharacter::ADFCharacter(const FObjectInitializer& ObjectInitializer)
 	
 	RightGrabComp = CreateDefaultSubobject<UGrabComponent>(TEXT("RightGrab"));
 	
-
 	MovementModifier = CreateDefaultSubobject<UMovementModifierComponent>(TEXT("MovementModifier"));
 
 	AbilityManager = CreateDefaultSubobject<UAbilityStrategyManager>(TEXT("AbilityManager"));
 	
 	StateManager = CreateDefaultSubobject<UCharacterStateManager>(TEXT("StateManager"));
 
-	SetAllBonesMass(5.0f);
+	//SetAllBonesMass(5.0f);
+
+	GetMesh()->SetIsReplicated(true);
+	GetMesh()->bReplicatePhysicsToAutonomousProxy = true;
 }
 
 void ADFCharacter::BeginPlay()

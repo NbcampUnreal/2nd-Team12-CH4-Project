@@ -24,9 +24,15 @@ UGrabComponent::UGrabComponent()
 	GrabConstraint->SetLinearYLimit(ELinearConstraintMotion::LCM_Locked, 0.f);
 	GrabConstraint->SetLinearZLimit(ELinearConstraintMotion::LCM_Locked, 0.f);
 
-	GrabConstraint->SetAngularSwing1Limit(EAngularConstraintMotion::ACM_Limited, 60.f);
-	GrabConstraint->SetAngularSwing2Limit(EAngularConstraintMotion::ACM_Limited, 60.f);
-	GrabConstraint->SetAngularTwistLimit(EAngularConstraintMotion::ACM_Limited, 45.f);
+	GrabConstraint->SetAngularSwing1Limit(EAngularConstraintMotion::ACM_Locked, 0.f);
+	GrabConstraint->SetAngularSwing2Limit(EAngularConstraintMotion::ACM_Locked, 0.f);
+	GrabConstraint->SetAngularTwistLimit(EAngularConstraintMotion::ACM_Locked, 0.f);
+
+	GrabConstraint->ConstraintInstance.ProfileInstance.AngularDrive.AngularDriveMode = EAngularDriveMode::TwistAndSwing;
+	GrabConstraint->ConstraintInstance.ProfileInstance.AngularDrive.SwingDrive.Stiffness = 50000.f;
+	GrabConstraint->ConstraintInstance.ProfileInstance.AngularDrive.SwingDrive.Damping = 1000.f;
+	GrabConstraint->ConstraintInstance.ProfileInstance.AngularDrive.TwistDrive.Stiffness = 50000.f;
+	GrabConstraint->ConstraintInstance.ProfileInstance.AngularDrive.TwistDrive.Damping = 1000.f;
 }
 
 // Called when the game starts
