@@ -29,7 +29,7 @@ public:
 
     // 점수 변경 시 호출되는 함수 (서버에서만 호출됨)
     UFUNCTION(BlueprintCallable, Server, Reliable, Category = "Score")
-    void AddIndividualScore(int32 ScoreDelta);
+    void AddIndividualScore(int32 ScoreDelta);  
 
 
 

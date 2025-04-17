@@ -469,18 +469,26 @@ void ADFTimeOutGameMode::RespawnPlayer(AController* Controller, APawn* PawnToRes
         MoveComp->StopMovementImmediately();
     }
 
-    // 플레이어 시작(Spawn Point) 액터를 찾음.
-    AActor* PlayerStart = FindPlayerStart(Controller);
-    if (!PlayerStart)
+    // 모든 플레이어 시작(Spawn Point) 액터를 검색
+    TArray<AActor*> PlayerStarts;
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), APlayerStart::StaticClass(), PlayerStarts);
+
+    if (PlayerStarts.Num() > 0)
+    {
+        // 배열에서 랜덤한 인덱스 선택
+        int32 RandomIndex = FMath::RandRange(0, PlayerStarts.Num() - 1);
+        AActor* SelectedPlayerStart = PlayerStarts[RandomIndex];
+        UE_LOG(LogTemp, Log, TEXT("RespawnPlayer: 선택된 플레이어 시작 위치 %s"), *SelectedPlayerStart->GetActorLocation().ToString());
+
+        // Pawn의 위치와 회전을 선택된 스폰 포인트로 재설정.
+        PawnToRespawn->SetActorLocation(SelectedPlayerStart->GetActorLocation());
+        PawnToRespawn->SetActorRotation(SelectedPlayerStart->GetActorRotation());
+    }
+    else
     {
         UE_LOG(LogTemp, Error, TEXT("RespawnPlayer: 플레이어 시작 지점을 찾을 수 없습니다!"));
         return;
     }
-    UE_LOG(LogTemp, Log, TEXT("RespawnPlayer: 플레이어 시작 위치 %s"), *PlayerStart->GetActorLocation().ToString());
-
-    // Pawn의 위치와 회전을 스폰 포인트로 재설정.
-    PawnToRespawn->SetActorLocation(PlayerStart->GetActorLocation());
-    PawnToRespawn->SetActorRotation(PlayerStart->GetActorRotation());
 
     // 타이머 설정 직후 로그
     FTimerHandle RespawnTimerHandle;
