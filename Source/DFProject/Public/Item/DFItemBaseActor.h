@@ -11,6 +11,7 @@
 class USphereComponent;
 class UDFItemAbilityComponent;
 class UPhysicalAnimationComponent;
+class UAbilityStrategy;
 
 UCLASS()
 class DFPROJECT_API ADFItemBaseActor : public AActor
@@ -40,6 +41,8 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item")
 	bool bCanBeGrabbed;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item")
+	TSubclassOf<UAbilityStrategy> OwnerCharacterAbility;
 
 	UFUNCTION()
 	virtual void OnGripAreaBeginOverlap(
@@ -62,6 +65,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Item")
 	void AbilitiesMainAction();
+
+	UFUNCTION(BlueprintCallable, Category = "Item")
+	TSubclassOf<UAbilityStrategy> GetCharacterAbility() const;
 
 	virtual void SetupItem(const FItemInstanceData& InData);
 

@@ -19,6 +19,7 @@ enum class EItemType : uint8
 };
 
 class ADFItemBaseActor;
+class UAbilityStrategy;
 
 UCLASS()
 class DFPROJECT_API UDFBaseItem : public UPrimaryDataAsset
@@ -63,6 +64,9 @@ public:
 
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<ADFItemBaseActor> ItemActorClass;
+
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<UAbilityStrategy> CharacterAbility;
 
 	virtual FPrimaryAssetId GetPrimaryAssetId() const override;
 };

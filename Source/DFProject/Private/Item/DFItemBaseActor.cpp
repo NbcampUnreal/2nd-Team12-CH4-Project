@@ -2,6 +2,7 @@
 #include "Item/DFItemInstance.h"
 #include "Item/DFBattleItem.h"
 #include "Item/DFItemAbilityComponent.h"
+#include "Ability/Strategy/AbilityStrategy.h"
 #include "Character/BodyPart/AttachInfoComponent.h"
 #include "Components/SphereComponent.h"
 #include "PhysicsEngine/PhysicalAnimationComponent.h"
@@ -71,16 +72,9 @@ void ADFItemBaseActor::SetupItem(const FItemInstanceData& InData)
 	ItemMesh->SetAnimationMode(EAnimationMode::AnimationBlueprint);
 	ItemMesh->SetAnimInstanceClass(LoadedItem->AnimBP);
 	ItemMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	ItemMesh->SetCollisionResponseToChannel(ECC_Visibility, ECollisionResponse::ECR_Overlap);
 	ItemMesh->SetIsReplicated(true);
 	ItemMesh->SetSimulatePhysics(true);
-	//if (HasAuthority())
-	//{
-
-	//}
-	//else
-	//{
-	//	ItemMesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	//}
 
 	if (LoadedItem->AssetType != FPrimaryAssetType("BattleItem"))
 	{
@@ -120,7 +114,11 @@ void ADFItemBaseActor::SetupItem(const FItemInstanceData& InData)
 		ItemAbilities.Add(NewAbility);
 		
 	}
-		
+	
+	if (LoadedItem->CharacterAbility)
+	{
+		OwnerCharacterAbility = LoadedItem->CharacterAbility;
+	}
 }
 
 void ADFItemBaseActor::OnGripAreaBeginOverlap(
@@ -153,4 +151,9 @@ void ADFItemBaseActor::AbilitiesMainAction()
 		}
 
 	}
+}
+
+TSubclassOf<UAbilityStrategy> ADFItemBaseActor::GetCharacterAbility() const
+{
+	return OwnerCharacterAbility;
 }
