@@ -16,10 +16,10 @@ UBTTask_ThrowGrabbedTarget::UBTTask_ThrowGrabbedTarget()
 	NodeName = TEXT("ThrowGrabbedTarget");
 
 	GrabTargetActorKey = TEXT("GrabTargetActor");
-
 	ThrowPower = 1000.f;
-
+	ThrowDelay = 0.3f; 
 	bNotifyTick = false;
+	bCreateNodeInstance = true;
 }
 
 EBTNodeResult::Type UBTTask_ThrowGrabbedTarget::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
@@ -54,10 +54,10 @@ EBTNodeResult::Type UBTTask_ThrowGrabbedTarget::ExecuteTask(UBehaviorTreeCompone
 		return EBTNodeResult::Failed;
 	}
 
-	return EvaluateAndAttemptThrow(MyCharacter, TargetCharacter);
+	return EvaluateAndAttemptThrow(OwnerComp, MyCharacter, TargetCharacter);
 }
 
-EBTNodeResult::Type UBTTask_ThrowGrabbedTarget::EvaluateAndAttemptThrow(ADFCharacter* MyCharacter, ADFCharacter* TargetCharacter)
+EBTNodeResult::Type UBTTask_ThrowGrabbedTarget::EvaluateAndAttemptThrow(UBehaviorTreeComponent& OwnerComp, ADFCharacter* MyCharacter, ADFCharacter* TargetCharacter)
 {
 	if (!MyCharacter)
 	{
@@ -78,8 +78,6 @@ EBTNodeResult::Type UBTTask_ThrowGrabbedTarget::EvaluateAndAttemptThrow(ADFChara
 	}
 
 	const ECharacterStateType TargetState = TargetCharacter->StateManager->CurrentState->GetStateType();
-	LOG_WARNING(TEXT("ThrowTask: Target 상태 = %d"), static_cast<int32>(TargetState));
-
 	if (TargetState != ECharacterStateType::Stunned)
 	{
 		LOG_WARNING(TEXT("ThrowTask: Target 상태가 Stunned 아님"));
@@ -88,46 +86,38 @@ EBTNodeResult::Type UBTTask_ThrowGrabbedTarget::EvaluateAndAttemptThrow(ADFChara
 		return EBTNodeResult::Failed;
 	}
 
-	// 1. 점프
 	MyCharacter->Jump();
-	LOG_WARNING(TEXT("ThrowTask: AI 점프 실행"));
+	LOG_WARNING(TEXT("ThrowTask: 점프 실행"));
 
-	FTimerHandle JumpDelay;
-	MyCharacter->GetWorld()->GetTimerManager().SetTimer(
-		JumpDelay,
-		[]()
+	OwnerCompPtr = &OwnerComp;
+
+	FTimerDelegate ThrowDelegate;
+	ThrowDelegate.BindLambda([=, this]()
 		{
+			if (!MyCharacter || !TargetCharacter) return;
 
-		},
-		0.5f, false
-		);
+			MyCharacter->Server_ReleaseGrab();
+			MyCharacter->Server_StopGrab();
 
-	// 2. 그랩 해제
-	MyCharacter->Server_ReleaseGrab();
-	MyCharacter->Server_StopGrab();
+			if (UPrimitiveComponent* Mesh = TargetCharacter->GetMesh())
+			{
+				const FVector ThrowDir = (TargetCharacter->GetActorLocation() - MyCharacter->GetActorLocation()).GetSafeNormal();
+				Mesh->AddImpulse(ThrowDir * ThrowPower, NAME_None, true);
+				LOG_WARNING(TEXT("ThrowTask: Impulse 적용 완료"));
+			}
+			else
+			{
+				LOG_WARNING(TEXT("ThrowTask: TargetCharacter Mesh 없음"));
+			}
 
-	// 3. Impulse 던지기
-	if (UPrimitiveComponent* Mesh = TargetCharacter->GetMesh())
-	{
-		const FVector ThrowDir = (TargetCharacter->GetActorLocation() - MyCharacter->GetActorLocation()).GetSafeNormal();
-		Mesh->AddImpulse(ThrowDir * ThrowPower, NAME_None, true);
-		LOG_WARNING(TEXT("ThrowTask: Impulse 적용 완료"));
-	}
-	else
-	{
-		LOG_WARNING(TEXT("ThrowTask: TargetCharacter Mesh 없음"));
-		return EBTNodeResult::Failed;
-	}
+			if (OwnerCompPtr)
+			{
+				FinishLatentTask(*OwnerCompPtr, EBTNodeResult::Succeeded);
+			}
+		});
 
-	FTimerHandle FinishDelay;
 	MyCharacter->GetWorld()->GetTimerManager().SetTimer(
-		FinishDelay,
-		[]()
-		{
-	
-		},
-		0.5f, false
-		);
+		ThrowTimerHandle, ThrowDelegate, ThrowDelay, false);
 
-	return EBTNodeResult::Succeeded;
+	return EBTNodeResult::InProgress;
 }

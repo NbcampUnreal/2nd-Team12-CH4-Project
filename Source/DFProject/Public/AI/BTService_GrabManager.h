@@ -20,19 +20,15 @@ public:
 protected:
 	virtual void TickNode(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds) override;
 
-	/** 블랙보드: 그랩 가능한 대상 (스턴된 적) */
 	UPROPERTY(EditAnywhere, Category = "Blackboard")
 	FName GrabTargetActorKey;
 
-	/** 블랙보드: 그랩 가능 여부 */
 	UPROPERTY(EditAnywhere, Category = "Blackboard")
 	FName CanGrabKey;
 
 	UPROPERTY(EditAnywhere, Category = "Blackboard")
 	FName AILevelKey;
 
-	/** 그랩 감지 범위 (기본 800) */
 	UPROPERTY(EditAnywhere, Category = "Config")
 	float GrabDetectRadius;
-
 };

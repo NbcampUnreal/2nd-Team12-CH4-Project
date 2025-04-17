@@ -3,7 +3,7 @@
 
 #include "AI/BTService_AvoidDanger.h"
 #include "BehaviorTree/BlackboardComponent.h"
-#include "AIController.h"
+#include "AI/DFAIController.h"
 #include "NavigationSystem.h"
 #include "Kismet/GameplayStatics.h"
 #include "Level/DFDeadZoneComponent.h"
@@ -26,12 +26,12 @@ void UBTService_AvoidDanger::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* 
 {
 	Super::TickNode(OwnerComp, NodeMemory, DeltaSeconds);
 
-	AAIController* AIController = OwnerComp.GetAIOwner();
+	ADFAIController* AIController = Cast<ADFAIController>(OwnerComp.GetAIOwner());
 	if (!AIController)
 	{
-		LOG_WARNING(TEXT("TickNode: No AIController"));
 		return;
 	}
+
 
 	APawn* AIPawn = AIController->GetPawn();
 	if (!AIPawn)
@@ -202,12 +202,18 @@ bool UBTService_AvoidDanger::IsNearDeadZones(const FVector& Location, FVector& O
 		if (!Zone) continue;
 
 		const FVector ZoneLoc = Zone->GetActorLocation();
-		const float Dist = FVector::Dist2D(ZoneLoc, Location);
+		const float DeadZoneZOffset = 300.f;
+		const FVector AdjustedZoneLoc = ZoneLoc + FVector(0.f, 0.f, DeadZoneZOffset);
+		const float Dist = FVector::Dist(AdjustedZoneLoc, Location);
 
 		if (Dist <= DetectRadius && Dist < ClosestDist)
 		{
 			ClosestDist = Dist;
-			ClosestDir = ZoneLoc - Location;
+
+			// ✅ 회피 방향은 XY 평면 기준 (Z는 고정)
+			FVector ZoneFlatLoc = FVector(ZoneLoc.X, ZoneLoc.Y, Location.Z);
+			ClosestDir = ZoneFlatLoc - Location;
+
 			ClosestLoc = ZoneLoc;
 			bDetected = true;
 
