@@ -8,6 +8,15 @@ class UBoxComponent;
 class ADFItemBaseActor;
 class UDFBattleItem;
 
+USTRUCT(BlueprintType)
+struct FItemInstanceData
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FPrimaryAssetId ItemId;
+};
+
 UCLASS()
 class DFPROJECT_API ADFItemSpawner : public AActor
 {
@@ -24,6 +33,10 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "ItemSpawner")
 	void SpawnItem();
+
+	UFUNCTION(Server, Reliable)
+	void Server_SpawnItem();
+
 	UFUNCTION(BlueprintCallable, Category = "ItemSpawner")
 	FTransform SetSpawnTransform();
 	UFUNCTION(BlueprintCallable, Category = "ItemSpawner")

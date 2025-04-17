@@ -8,7 +8,8 @@
 ADFItemSpawner::ADFItemSpawner()
 {
 	PrimaryActorTick.bCanEverTick = false;
-	
+	bReplicates = true;
+
 	Scene = CreateDefaultSubobject<USceneComponent>(TEXT("RootComponent"));
 	SetRootComponent(Scene);
 
@@ -23,6 +24,16 @@ ADFItemSpawner::ADFItemSpawner()
 
 void ADFItemSpawner::SpawnItem()
 {
+	if (HasAuthority())
+	{
+		Server_SpawnItem();
+	}
+}
+
+void ADFItemSpawner::Server_SpawnItem_Implementation()
+{
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("DoSpawn")));
+
 	FPrimaryAssetType ItemType = FPrimaryAssetType("BattleItem");
 
 	TArray<FPrimaryAssetId> AssetIds;
@@ -37,14 +48,16 @@ void ADFItemSpawner::SpawnItem()
 	FPrimaryAssetId ChosenId = AssetIds[RandIndex];
 
 	UAssetManager::Get().LoadPrimaryAsset(ChosenId, {}, FStreamableDelegate::CreateLambda([=, this]() {
-		UObject* Loaded = UAssetManager::Get().GetPrimaryAssetObject(ChosenId);
-		UDFBattleItem* LoadedItem = Cast<UDFBattleItem>(Loaded);
-	
+		UDFBattleItem* LoadedItem = Cast<UDFBattleItem>(UAssetManager::Get().GetPrimaryAssetObject(ChosenId));
+
 		if (!LoadedItem)
 		{
 			UE_LOG(LogTemp, Warning, TEXT("스포너 : 데이터 없음"));
-			return;			
+			return;
 		}
+
+		FItemInstanceData ItemData;
+		ItemData.ItemId = ChosenId;
 
 		UDFItemInstance* NewInstance = NewObject<UDFItemInstance>();
 		NewInstance->Initialize(LoadedItem);
@@ -56,7 +69,10 @@ void ADFItemSpawner::SpawnItem()
 			return;
 		}
 
-		ADFItemBaseActor* SpawnedActor = GetWorld()->SpawnActor<ADFItemBaseActor>(ADFItemBaseActor::StaticClass(), SpawnTransform);
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+		ADFItemBaseActor* SpawnedActor = GetWorld()->SpawnActor<ADFItemBaseActor>(ADFItemBaseActor::StaticClass(), SpawnTransform, SpawnParams);
 
 		if (!SpawnedActor)
 		{
@@ -64,8 +80,10 @@ void ADFItemSpawner::SpawnItem()
 			return;
 		}
 
-		SpawnedActor->SetupItem(NewInstance);
-	}));
+		SpawnedActor->SetReplicates(true);
+		SpawnedActor->ItemData = ItemData;
+		SpawnedActor->SetupItem(ItemData);
+		}));
 }
 
 FTransform ADFItemSpawner::SetSpawnTransform()

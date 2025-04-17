@@ -4,9 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Item/DFItemSpawner.h"
 #include "DFItemBaseActor.generated.h"
 
-class UDFItemInstance;
+//class UDFItemInstance;
 class USphereComponent;
 class UDFItemAbilityComponent;
 class UPhysicalAnimationComponent;
@@ -19,11 +20,10 @@ class DFPROJECT_API ADFItemBaseActor : public AActor
 public:
 	ADFItemBaseActor();
 
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item")
 	USkeletalMeshComponent* ItemMesh;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
-	UDFItemInstance* ItemInstance;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item")
 	USphereComponent* GripArea;
@@ -31,8 +31,14 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item")
 	TArray<UDFItemAbilityComponent*> ItemAbilities;
 
-	UPROPERTY(VisibleAnywhere, Category = "Physics")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item")
 	UPhysicalAnimationComponent* PhysicalAnimComp;
+
+	UPROPERTY(ReplicatedUsing = OnRep_ItemData)
+	FItemInstanceData ItemData;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item")
+	bool bCanBeGrabbed;
 
 
 	UFUNCTION()
@@ -51,19 +57,15 @@ public:
 		UPrimitiveComponent* OtherComp,
 		int32 OtherBodyIndex);
 
-	UFUNCTION(BlueprintCallable, Category = "Item")
-	virtual void SetupItem(UDFItemInstance* NewItemInstance);
+	UFUNCTION()
+	void OnRep_ItemData();
 
 	UFUNCTION(BlueprintCallable, Category = "Item")
 	void AbilitiesMainAction();
 
-	UFUNCTION(BlueprintCallable, Category = "Item")
-	FName GetCurrentItemId() const;
+	virtual void SetupItem(const FItemInstanceData& InData);
 
 protected:
 	virtual void BeginPlay() override;
 
-private:
-	void AttachAbilities();
-	bool bCanBeGrabbed;
 };

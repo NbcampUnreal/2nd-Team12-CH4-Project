@@ -3,6 +3,7 @@
 #include "Item/DFItemBaseActor.h"
 #include "Item/DFItemInstance.h"
 #include "Kismet/GameplayStatics.h"
+#include "Engine/AssetManager.h"
 
 UDFItemAbilityComponent::UDFItemAbilityComponent()
 {
@@ -23,18 +24,17 @@ void UDFItemAbilityComponent::BeginPlay()
 
 		if (ParentActor)
 		{
-			if (ParentActor->ItemInstance && ParentActor->ItemInstance->ItemData)
+			FPrimaryAssetId ItemId = ParentActor->ItemData.ItemId;
+
+			if (ItemId.IsValid())
 			{
-				ParentItemData = ParentActor->ItemInstance->ItemData;
+				UDFBattleItem* LoadedItem = Cast<UDFBattleItem>(UAssetManager::Get().GetPrimaryAssetObject(ItemId));
 
-				if (ParentItemData->ActionAnim)
+				if (LoadedItem)
 				{
-					ParentActionAnim = ParentItemData->ActionAnim;
-				}
-
-				if (ParentItemData->ActionSound)
-				{
-					ParentActionsound = ParentItemData->ActionSound;
+					ParentItemData = LoadedItem;
+					ParentActionAnim = LoadedItem->ActionAnim;
+					ParentActionsound = LoadedItem->ActionSound;
 				}
 			}
 
@@ -49,6 +49,14 @@ void UDFItemAbilityComponent::BeginPlay()
 
 void UDFItemAbilityComponent::MainAction()
 {	
+	if (GetOwner()->HasAuthority())
+	{
+		Multicast_MainAction();
+	}
+}
+
+void UDFItemAbilityComponent::Multicast_MainAction_Implementation()
+{
 	if (ParentMesh && ParentActionAnim)
 	{
 		if (UAnimInstance* AnimInstance = ParentMesh->GetAnimInstance())
@@ -62,6 +70,7 @@ void UDFItemAbilityComponent::MainAction()
 	PlayActionSound();
 }
 
+
 void UDFItemAbilityComponent::PlayActionSound()
 {
 	if (!ParentActionsound)
@@ -73,4 +82,9 @@ void UDFItemAbilityComponent::PlayActionSound()
 	{
 		UGameplayStatics::PlaySoundAtLocation(this, ParentActionsound, ParentActor->GetActorLocation());
 	}
+}
+
+void UDFItemAbilityComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 }

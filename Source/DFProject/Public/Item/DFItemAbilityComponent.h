@@ -15,15 +15,31 @@ class DFPROJECT_API UDFItemAbilityComponent : public UActorComponent
 public:	
 	UDFItemAbilityComponent();
 
+	UPROPERTY()
+	ADFItemBaseActor* ParentActor;
+
+	UPROPERTY()
+	UDFBattleItem* ParentItemData;
+
+	UPROPERTY()
+	USkeletalMeshComponent* ParentMesh;
+
+	UPROPERTY()
+	UAnimMontage* ParentActionAnim;
+
+	UPROPERTY()
+	USoundBase* ParentActionsound;
+
 	virtual void MainAction();
+
+	virtual void PlayActionSound();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_MainAction();
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 protected:
 	virtual void BeginPlay() override;
-	virtual void PlayActionSound();
 
-	ADFItemBaseActor* ParentActor;
-	UDFBattleItem* ParentItemData;
-	USkeletalMeshComponent* ParentMesh;
-	UAnimMontage* ParentActionAnim;
-	USoundBase* ParentActionsound;
 };
