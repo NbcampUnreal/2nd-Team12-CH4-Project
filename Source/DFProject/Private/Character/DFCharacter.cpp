@@ -19,17 +19,17 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "PhysicsEngine/PhysicalAnimationComponent.h"
-#include "DirGravity/Public/GravityMovementComponent.h"
 #include "Item/DFItemBaseActor.h"
 #include "Net/UnrealNetwork.h"
 #include "PhysicsEngine/PhysicsConstraintComponent.h"
+#include "DirGravity/Public/GravityMovementComponent.h"
 
 DEFINE_LOG_CATEGORY(LogDamaged);
 DEFINE_LOG_CATEGORY(LogInitialize);
 
-ADFCharacter::ADFCharacter()
+ADFCharacter::ADFCharacter(const FObjectInitializer& ObjectInitializer)
+	:Super(ObjectInitializer.SetDefaultSubobjectClass<UGravityMovementComponent>(ACharacter::CharacterMovementComponentName))
 {
-	
 	PrimaryActorTick.bCanEverTick = true;
 	bUseControllerRotationYaw = false;
 	

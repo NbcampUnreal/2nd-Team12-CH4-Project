@@ -5,6 +5,7 @@
 
 #include "Character/DFCharacter.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "PhysicsEngine/PhysicsConstraintComponent.h"
 
 void UDeadState::Enter(ADFCharacter* Character)
 {

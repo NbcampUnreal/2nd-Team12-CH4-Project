@@ -31,7 +31,7 @@ class DFPROJECT_API ADFCharacter : public ACharacter, public IGrabbable
 	GENERATED_BODY()
 
 public:
-	ADFCharacter();
+	ADFCharacter(const FObjectInitializer& ObjectInitializer);
 
 protected:
 	virtual void BeginPlay() override;
