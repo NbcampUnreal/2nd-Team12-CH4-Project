@@ -32,7 +32,4 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "Blackboard")
 	FName MoveLocationKey;
 
-
-
-	
 };

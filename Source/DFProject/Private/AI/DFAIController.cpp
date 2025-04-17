@@ -38,6 +38,8 @@ void ADFAIController::BeginAI(APawn* InPawn)
 			bool bRunSucceeded = RunBehaviorTree(BehaviorTree);
 			CHECK(bRunSucceeded != BehaviorTree, )
 			LOG(Log, TEXT("Run Behavior Tree"))
+			LOG_WARNING(TEXT("BeginAI: CurrentAILevel = %d"), static_cast<int32>(CurrentAILevel));
+
 		}
 	}
 }

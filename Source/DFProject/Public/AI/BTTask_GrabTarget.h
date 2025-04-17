@@ -20,10 +20,19 @@ public:
 protected:
 	virtual EBTNodeResult::Type ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) override;
 
-	/** 블랙보드 키: Grab 대상 */
+	EBTNodeResult::Type EvaluateAndAttemptGrab(UBehaviorTreeComponent& OwnerComp, class ADFCharacter* MyCharacter, class ADFCharacter* TargetCharacter);
+
+protected:
 	UPROPERTY(EditAnywhere, Category = "Blackboard")
 	FName GrabTargetActorKey;
 
-private:
-	EBTNodeResult::Type EvaluateAndAttemptGrab(class ADFCharacter* MyCharacter, class ADFCharacter* TargetCharacter);
+	UPROPERTY(EditAnywhere, Category = "Grab")
+	float GrabHoldDelay;
+
+	UPROPERTY(EditAnywhere, Category = "Grab")
+	float GrabRange;
+
+	FTimerHandle GrabDelayHandle;
+
+	UBehaviorTreeComponent* OwnerCompPtr;
 };

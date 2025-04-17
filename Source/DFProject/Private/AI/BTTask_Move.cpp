@@ -41,7 +41,7 @@ EBTNodeResult::Type UBTTask_Move::ExecuteTask(UBehaviorTreeComponent& OwnerComp,
 	bool bHasLocation = BlackboardComp->IsVectorValueSet(TargetKeyName) || BlackboardComp->GetValueAsObject(TargetKeyName) != nullptr;
 	if (!bHasLocation)
 	{
-		LOG_WARNING(TEXT("MoveTask: TargetKey (%s) has no valid value."), *TargetKeyName.ToString());
+		//LOG_WARNING(TEXT("MoveTask: TargetKey (%s) has no valid value."), *TargetKeyName.ToString());
 		return EBTNodeResult::Failed;
 	}
 
@@ -88,15 +88,30 @@ void UBTTask_Move::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory
 	float Distance = FVector::Dist(MyCharacter->GetActorLocation(), TargetLocation);
 	AdjustSpeed(MyCharacter, AIController, Distance);
 
-	FVector Direction = TargetLocation - MyCharacter->GetActorLocation();
+	const bool bEvading = BlackboardComp->GetValueAsBool(TEXT("IsEvadingGrab"));
+	const bool bAvoiding = BlackboardComp->IsVectorValueSet(TEXT("AvoidLocation"));
+
+	// 회전 속도 조정
+	float RotationSpeed = 10.f; // 기본 회전 속도
+	if (bAvoiding) // DeadZone 회피 중엔 느리게
+	{
+		RotationSpeed = 1.0f;
+	}
+	else if (bEvading) // Grab 회피 중엔 약간 느리게
+	{
+		RotationSpeed = 10.0f;
+	}
+
+	// 기본적으로 MoveLocation을 향해 회전
+	FVector LookTargetLocation = TargetLocation;
+	FVector Direction = LookTargetLocation - MyCharacter->GetActorLocation();
 	Direction.Z = 0.f;
 
 	if (!Direction.IsNearlyZero())
 	{
 		Direction.Normalize();
-		FRotator CurrentRotation = MyCharacter->GetActorRotation();
 		FRotator DesiredRotation = Direction.Rotation();
-		FRotator NewRotation = FMath::RInterpTo(CurrentRotation, DesiredRotation, DeltaSeconds, 5.f);
+		FRotator NewRotation = FMath::RInterpTo(MyCharacter->GetActorRotation(), DesiredRotation, DeltaSeconds, RotationSpeed);
 		MyCharacter->SetActorRotation(NewRotation);
 	}
 }

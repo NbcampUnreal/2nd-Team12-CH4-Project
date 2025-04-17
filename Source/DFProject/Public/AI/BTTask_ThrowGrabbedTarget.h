@@ -17,7 +17,11 @@ class DFPROJECT_API UBTTask_ThrowGrabbedTarget : public UBTTaskNode
 public:
 	UBTTask_ThrowGrabbedTarget();
 
+protected:
 	virtual EBTNodeResult::Type ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) override;
+
+private:
+	EBTNodeResult::Type EvaluateAndAttemptThrow(UBehaviorTreeComponent& OwnerComp, class ADFCharacter* MyCharacter, class ADFCharacter* TargetCharacter);
 
 protected:
 	UPROPERTY(EditAnywhere, Category = "Blackboard")
@@ -26,6 +30,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Throw")
 	float ThrowPower;
 
-private:
-	EBTNodeResult::Type EvaluateAndAttemptThrow(class ADFCharacter* MyCharacter, class ADFCharacter* TargetCharacter);
+	UPROPERTY(EditAnywhere, Category = "Throw")
+	float ThrowDelay;
+
+	FTimerHandle ThrowTimerHandle;
+	UBehaviorTreeComponent* OwnerCompPtr;
 };
