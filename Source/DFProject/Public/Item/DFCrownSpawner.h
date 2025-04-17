@@ -32,6 +32,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "CrownSpawner")
 	void SpawnCrown();
 
+	UFUNCTION(Server, Reliable)
+	void Server_SpawnCrown();
+
 protected:
 	virtual void BeginPlay() override;
 

@@ -5,6 +5,7 @@
 
 ADFCrownActor::ADFCrownActor()
 {
+	bReplicates = true;
 	GripArea->SetupAttachment(RootComponent);
 }
 

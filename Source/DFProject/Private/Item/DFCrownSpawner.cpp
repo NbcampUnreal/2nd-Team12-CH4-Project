@@ -24,6 +24,14 @@ void ADFCrownSpawner::BeginPlay()
 
 void ADFCrownSpawner::SpawnCrown()
 {
+	if (HasAuthority())
+	{
+		Server_SpawnCrown();
+	}
+}
+
+void ADFCrownSpawner::Server_SpawnCrown_Implementation()
+{
 	FVector BoxExtent = SpawnArea->GetScaledBoxExtent();
 
 	FVector BoxLocation = SpawnArea->GetComponentLocation();
@@ -37,3 +45,4 @@ void ADFCrownSpawner::SpawnCrown()
 	Crown = GetWorld()->SpawnActor<ADFCrownActor>(CrownActor, SpawnLocation, FRotator::ZeroRotator);
 
 }
+
