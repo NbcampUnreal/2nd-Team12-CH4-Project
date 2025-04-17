@@ -34,8 +34,8 @@ public:
 
 	virtual void PlayActionSound();
 
-	UFUNCTION(NetMulticast, Reliable)
-	void Multicast_MainAction();
+	UFUNCTION(Server, Reliable)
+	void Server_MainAction();
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 

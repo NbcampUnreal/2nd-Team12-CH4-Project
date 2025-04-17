@@ -156,6 +156,14 @@ void ADFItemBaseActor::OnGripAreaEndOverlap(
 
 void ADFItemBaseActor::AbilitiesMainAction()
 {
+	if (HasAuthority())
+	{
+		Server_AbilitiesMainAction();
+	}
+}
+
+void ADFItemBaseActor::Server_AbilitiesMainAction_Implementation()
+{
 	for (UDFItemAbilityComponent* Ability : ItemAbilities)
 	{
 		if (IsValid(Ability))

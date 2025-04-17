@@ -70,6 +70,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Item")
 	void AbilitiesMainAction();
 
+	UFUNCTION(Server, Reliable)
+	void Server_AbilitiesMainAction();
+
 	UFUNCTION(BlueprintCallable, Category = "Item")
 	TSubclassOf<UAbilityStrategy> GetCharacterAbility() const;
 

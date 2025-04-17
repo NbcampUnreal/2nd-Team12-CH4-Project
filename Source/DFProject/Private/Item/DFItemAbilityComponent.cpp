@@ -51,11 +51,11 @@ void UDFItemAbilityComponent::MainAction()
 {	
 	if (GetOwner()->HasAuthority())
 	{
-		Multicast_MainAction();
+		Server_MainAction();
 	}
 }
 
-void UDFItemAbilityComponent::Multicast_MainAction_Implementation()
+void UDFItemAbilityComponent::Server_MainAction_Implementation()
 {
 	if (ParentMesh && ParentActionAnim)
 	{
