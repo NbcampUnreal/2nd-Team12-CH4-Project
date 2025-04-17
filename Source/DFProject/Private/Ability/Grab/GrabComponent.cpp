@@ -267,7 +267,7 @@ void UGrabComponent::Grabbed(const FGrabTargetInfo& Info)
 	if (GetOwner()->HasAuthority()) Multicast_Grabbed(Info);
 	
 	IGrabbable::Execute_OnGrabbed(GetOwner(), Info.TargetActor);
-	IGrabbable::Execute_OnGrabbedBy(Info.TargetActor, GetOwner());
+	IGrabbable::Execute_OnGrabbedBy(Info.TargetActor, GetOwner(), GrabConstraint);
 }
 
 void UGrabComponent::Multicast_Grabbed_Implementation(const FGrabTargetInfo& Info)

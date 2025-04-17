@@ -5,6 +5,8 @@
 #include "CoreMinimal.h"
 #include "Grabbable.generated.h"
 
+class UPhysicsConstraintComponent;
+
 UENUM(BlueprintType)
 enum class EGrabMode : uint8
 {
@@ -28,8 +30,8 @@ public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Grabbable")
 	TArray<FName> GetGrabSocketNames() const;
 
-	//UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Grabbable")
-	//EGrabMode GetGrabMode() const;
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Grabbable")
+	void DestroyThis();
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Grabbable")
 	AActor* GetActualTarget();
@@ -38,7 +40,7 @@ public:
 	void OnGrabbed(AActor* TargetActor);
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Grabbable")
-	void OnGrabbedBy(AActor* Grabber);
+	void OnGrabbedBy(AActor* Grabber, UPhysicsConstraintComponent* GrabbersConstraint);
 	
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Grabbable")
 	void OnGrabReleased(AActor* TargetActor);
@@ -54,4 +56,6 @@ public:
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category="Grabbable")
 	void Use();
+
+	TWeakObjectPtr<UPhysicsConstraintComponent> GrabberConstraint; // 아직은 단일 대상만 생각
 };

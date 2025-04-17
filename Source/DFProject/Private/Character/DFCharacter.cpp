@@ -11,6 +11,7 @@
 #include "Character/BodyPart/BodyPart.h"
 #include "Character/BodyPart/AttachInfoComponent.h"
 #include "Character/State/CharacterStateManager.h"
+#include "Character/State/DeadState.h"
 #include "Character/State/GrabbedState.h"
 #include "Character/State/IdleState.h"
 #include "Character/State/RecoverState.h"
@@ -20,6 +21,7 @@
 #include "PhysicsEngine/PhysicalAnimationComponent.h"
 #include "DirGravity/Public/GravityMovementComponent.h"
 #include "Net/UnrealNetwork.h"
+#include "PhysicsEngine/PhysicsConstraintComponent.h"
 
 DEFINE_LOG_CATEGORY(LogDamaged);
 DEFINE_LOG_CATEGORY(LogInitialize);
@@ -73,6 +75,22 @@ void ADFCharacter::BeginPlay()
 	BodyParts.Empty();
 	BodyParts.SetNum(static_cast<int32>(EBodyPartType::MAX));
 }
+
+void ADFCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	Super::EndPlay(EndPlayReason);
+
+	if (GrabberConstraint.Get() && !GrabberConstraint->IsBroken())
+		GrabberConstraint->BreakConstraint();
+	
+	
+	for (auto Body : BodyParts)
+	{
+		if (Body) Body->Destroy();
+	}
+}
+
+
 
 void ADFCharacter::Tick(float DeltaTime)
 {
@@ -187,12 +205,11 @@ ABodyPart* ADFCharacter::GetBodyPart(EBodyPartType Type)
 	return nullptr;
 }
 
-bool ADFCharacter::EventOnDestroy()
+void ADFCharacter::DeadEvent()
 {
-	if (RightGrabComp) RightGrabComp->Released();
-	if (LeftGrabComp) LeftGrabComp->Released();
-	
-	return MovementModifier->UnregisterAll();
+	if (!HasAuthority()) return;
+
+	StateManager->SetState(NewObject<UDeadState>(this));
 }
 
 UGravityMovementComponent* ADFCharacter::GetGravityMovementComponent()
@@ -292,7 +309,8 @@ void ADFCharacter::Initialize()
 
 void ADFCharacter::Move(const FInputActionValue& Value)
 {
-	if (StateManager->IsCurrentState(ECharacterStateType::Stunned)) return;
+	if (StateManager->IsCurrentState(ECharacterStateType::Stunned) ||
+		StateManager->IsCurrentState(ECharacterStateType::Dead)) return;
 	
 	const FVector2D MoveValue = Value.Get<FVector2D>();
 	// 카메라의 현재 Yaw(좌우) 회전 값을 기준으로 이동 방향 설정
@@ -617,9 +635,10 @@ void ADFCharacter::OnGrabbed_Implementation(AActor* TargetActor)
 	StateManager->SetState(NewObject<UGrabbedState>(this));
 }
 
-void ADFCharacter::OnGrabbedBy_Implementation(AActor* Grabber)
+void ADFCharacter::OnGrabbedBy_Implementation(AActor* Grabber, UPhysicsConstraintComponent* InGrabberConstraint)
 {
 	MovementModifier->RegisterGrabInteraction(Grabber);
+	GrabberConstraint = InGrabberConstraint;
 }
 
 void ADFCharacter::OnGrabReleased_Implementation(AActor* TargetActor)
@@ -636,6 +655,14 @@ void ADFCharacter::OnGrabReleasedBy_Implementation(AActor* Grabber)
 UPrimitiveComponent* ADFCharacter::GetRoot_Implementation()
 {
 	return GetMesh();
+}
+
+void ADFCharacter::DestroyThis_Implementation()
+{
+	IGrabbable::DestroyThis_Implementation();
+
+	if (GrabberConstraint.Get() && !GrabberConstraint->IsBroken())
+		GrabberConstraint->BreakConstraint();
 }
 
 void ADFCharacter::OnRep_LeftFist()

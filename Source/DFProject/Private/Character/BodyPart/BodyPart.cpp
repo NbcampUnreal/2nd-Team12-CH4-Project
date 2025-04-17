@@ -50,6 +50,14 @@ void ABodyPart::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	OwningCharacter = nullptr;
 }
 
+void ABodyPart::BeginDestroy()
+{
+	Super::BeginDestroy();
+	
+	if (BoneConstraint) BoneConstraint->BreakConstraint();
+	if (GrabberConstraint.Get()) GrabberConstraint->BreakConstraint(); 
+}
+
 void ABodyPart::Attach_Implementation(ACharacter* TargetCharacter, const UAttachInfoComponent* AttachInfo)
 {
 	if (!TargetCharacter || !AttachInfo || !TargetCharacter->GetMesh()) return;
@@ -163,11 +171,12 @@ void ABodyPart::OnGrabbed_Implementation(AActor* Grabber)
 	}
 }
 
-void ABodyPart::OnGrabbedBy_Implementation(AActor* Grabber)
+void ABodyPart::OnGrabbedBy_Implementation(AActor* Grabber, UPhysicsConstraintComponent* InGrabberConstraint)
 {
 	if (Owner && Owner->Implements<UGrabbable>())
 	{
-		return IGrabbable::Execute_OnGrabbedBy(Owner, Grabber);
+		GrabberConstraint = InGrabberConstraint;
+		return IGrabbable::Execute_OnGrabbedBy(Owner, Grabber, InGrabberConstraint);
 	}
 }
 

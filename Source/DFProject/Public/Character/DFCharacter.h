@@ -6,6 +6,7 @@
 #include "Ability/Grab/Grabbable.h"
 #include "GameFramework/Character.h"
 #include "PhysicsEngine/PhysicalAnimationComponent.h"
+#include "PhysicsEngine/PhysicsConstraintComponent.h"
 #include "DFCharacter.generated.h"
 
 class UDFPoseableMeshComponent;
@@ -38,6 +39,7 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void Tick(float DeltaTime) override;  
 public:
 	
@@ -46,9 +48,10 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 
 	ABodyPart* GetBodyPart(EBodyPartType Type);
-	
-	bool EventOnDestroy();
 
+	UFUNCTION(BlueprintCallable)
+	void DeadEvent();
+	
 	UFUNCTION(BlueprintCallable)
 	UGravityMovementComponent* GetGravityMovementComponent();
 	
@@ -145,7 +148,7 @@ public:
 
 	virtual void OnGrabbed_Implementation(AActor* TargetActor) override;
 
-	virtual void OnGrabbedBy_Implementation(AActor* Grabber) override;
+	virtual void OnGrabbedBy_Implementation(AActor* Grabber, UPhysicsConstraintComponent* InGrabberConstraint) override;
 
 	virtual void OnGrabReleased_Implementation(AActor* TargetActor) override;
 
@@ -153,6 +156,7 @@ public:
 
 	virtual UPrimitiveComponent* GetRoot_Implementation() override;
 
+	virtual void DestroyThis_Implementation() override;
 
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category=Camera)

@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Ability/Grab/Grabbable.h"
 #include "GameFramework/Actor.h"
+#include "PhysicsEngine/PhysicsConstraintComponent.h"
 #include "BodyPart.generated.h"
 
 class UAbilityStrategy;
@@ -39,6 +40,7 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	virtual void BeginDestroy() override;
 public:
 	UFUNCTION(BlueprintCallable, NetMulticast, Reliable, Category="BodyPart")
 	virtual void Attach(ACharacter* TargetCharacter, const UAttachInfoComponent* AttachInfo);
@@ -57,7 +59,7 @@ public:
 	
 	virtual void OnGrabbed_Implementation(AActor* TargetActor) override;
 	
-	virtual void OnGrabbedBy_Implementation(AActor* Grabber) override;
+	virtual void OnGrabbedBy_Implementation(AActor* Grabber, UPhysicsConstraintComponent* InGrabberConstraint) override;
 	
 	virtual void OnGrabReleased_Implementation(AActor* TargetActor) override;
 	
