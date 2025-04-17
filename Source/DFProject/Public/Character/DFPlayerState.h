@@ -31,6 +31,10 @@ public:
     UFUNCTION(BlueprintCallable, Server, Reliable, Category = "Score")
     void AddIndividualScore(int32 ScoreDelta);  
 
+    // UI에서 선택한 슬롯 번호
+    UPROPERTY(Replicated, BlueprintReadOnly, Category = "Lobby")
+    int32 SlotIndex = INDEX_NONE;
+
 
 
     // 네트워크 복제를 위한 설정 함수

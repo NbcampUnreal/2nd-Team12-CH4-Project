@@ -28,4 +28,5 @@ void ADFPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
     DOREPLIFETIME(ADFPlayerState, TeamID);
     DOREPLIFETIME(ADFPlayerState, IndividualScore);
     DOREPLIFETIME(ADFPlayerState, LastDamageDealer);
+	DOREPLIFETIME(ADFPlayerState, SlotIndex);
 }
