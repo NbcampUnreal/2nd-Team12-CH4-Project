@@ -42,6 +42,15 @@ EBTNodeResult::Type UBTTask_Attack::ExecuteTask(UBehaviorTreeComponent& OwnerCom
 		return EBTNodeResult::Failed;
 	}
 
+	const FVector MyLoc = MyCharacter->GetActorLocation();
+	const FVector TargetLoc = Target->GetActorLocation();
+	const FVector Direction = (TargetLoc - MyLoc).GetSafeNormal();
+
+	const FRotator CurrentRot = MyCharacter->GetActorRotation();
+	const FRotator TargetRot = Direction.Rotation();
+	const FRotator NewRot = FMath::RInterpTo(CurrentRot, TargetRot, MyCharacter->GetWorld()->GetDeltaSeconds(), 5.0f);
+	MyCharacter->SetActorRotation(NewRot);
+
 	const EAI_AILevels AILevel = AIController->GetAILevel();
 
 	float HeadbuttRate = 0.f;
