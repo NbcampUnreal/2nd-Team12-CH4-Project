@@ -15,12 +15,12 @@
 #include "Server/DFBattleGameState.h"
 #include "AIController.h"
 
-ADFTimeOutGameMode::ADFTimeOutGameMode()
+ADFTimeOutGameMode::ADFTimeOutGameMode()    
 {
     PrimaryActorTick.bCanEverTick = true;
 
     // Timeout 기본값 설정
-    TimeoutDuration = 180.f;
+    TimeoutDuration = 60.f;
     RespawnDelay = 5.f;
 
     // 기본 Battle Mode 설정: 팀전 또는 자유전 (여기서는 팀전으로 설정)
@@ -403,6 +403,8 @@ void ADFTimeOutGameMode::HandlePlayerOutOfBounds(APawn* Pawn)
 void ADFTimeOutGameMode::OnTimeout()
 {
     UE_LOG(LogTemp, Warning, TEXT("Timeout 발생: %f초 경과"), TimeoutDuration);
+    UE_LOG(LogTemp, Warning, TEXT("타이머 도달! TravelToAwards 실행 예정"));
+    EndGame();
 }
 
 void ADFTimeOutGameMode::UpdateTeamScores()
