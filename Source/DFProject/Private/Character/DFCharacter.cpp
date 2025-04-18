@@ -575,6 +575,8 @@ float ADFCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
 		Stun();
 	}
 
+	AbilityManager->StartAbility("Damaged", this);
+
 	return DamageApplied;
 }
 

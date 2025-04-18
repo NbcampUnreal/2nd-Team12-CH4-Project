@@ -54,5 +54,8 @@ protected:
 
 	UPROPERTY()
 	TSet<TWeakObjectPtr<AActor>> DamagedActor;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
+	USoundWave* AttackSound;
 };
 

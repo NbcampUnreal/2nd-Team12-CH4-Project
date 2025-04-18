@@ -174,24 +174,23 @@ void UGrabComponent::DetectClosestGrabbable()
 
 	CurrentTarget = ClosestActor; // 가장 가까운 액터를 현재 타겟으로 설정
 
-#if WITH_EDITOR // 디버그용. 구로 Sweep 하면 캡슐이니 캡슐로 표시함.
-	FVector SweepCenter = (Start + End) * 0.5f;
-	FVector CapsuleDirection = End - Start;
-	float HalfHeight = CapsuleDirection.Size() * 0.5f;
-	FQuat CapsuleRotation = FRotationMatrix::MakeFromZ(CapsuleDirection).ToQuat();
-
-	DrawDebugCapsule(
-		GetWorld(),
-		SweepCenter,
-		HalfHeight,
-		DetectionRadius,
-		CapsuleRotation,
-		FColor::Green,
-		false,
-		0.1f
-	);
-	DrawDebugSphere(GetWorld(), CurrentTargetLocation, DetectionRadius, 12, FColor::Red, false, 0.1f);
-#endif
+     // 디버그용. 구로 Sweep 하면 캡슐이니 캡슐로 표시함.
+	//FVector SweepCenter = (Start + End) * 0.5f;
+	//FVector CapsuleDirection = End - Start;
+	//float HalfHeight = CapsuleDirection.Size() * 0.5f;
+	//FQuat CapsuleRotation = FRotationMatrix::MakeFromZ(CapsuleDirection).ToQuat();
+//
+	//DrawDebugCapsule(
+	//	GetWorld(),
+	//	SweepCenter,
+	//	HalfHeight,
+	//	DetectionRadius,
+	//	CapsuleRotation,
+	//	FColor::Green,
+	//	false,
+	//	0.1f
+	//);
+	//DrawDebugSphere(GetWorld(), CurrentTargetLocation, DetectionRadius, 12, FColor::Red, false, 0.1f);
 }
 
 void UGrabComponent::StartGrab()

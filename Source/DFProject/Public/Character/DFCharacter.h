@@ -244,8 +244,3 @@ public:
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<UCharacterStateManager> StateManager;
 };
-
-
-
-
-

@@ -6,6 +6,7 @@
 #include "Character/DFCharacter.h"
 #include "Character/BodyPart/BodyPart.h"
 #include "Components/SphereComponent.h"
+#include "Kismet/GameplayStatics.h"
 
 UPunchAbilityStrategy::UPunchAbilityStrategy()
 {
@@ -18,4 +19,5 @@ void UPunchAbilityStrategy::ActivateAbility_Implementation(AActor* TargetActor)
 {
 	FVector Impulse = BodyPartOwner->GetActorForwardVector() * ImpulsePower;
 	OwningBodyPart->Multicast_AddImpulse(Impulse);
+	if (AttackSound) UGameplayStatics::PlaySoundAtLocation(this, AttackSound, OwningBodyPart->GetActorLocation());
 }
