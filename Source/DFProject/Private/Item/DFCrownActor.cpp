@@ -1,6 +1,7 @@
 #include "Item/DFCrownActor.h"
 #include "Character/DFCharacter.h"
 #include "Character/DFPlayerController.h"
+#include "Server/DFTimeOutGameMode.h"
 #include "Components/SphereComponent.h"
 
 ADFCrownActor::ADFCrownActor()
@@ -20,6 +21,10 @@ void ADFCrownActor::OnGripAreaBeginOverlap(
 	if (OtherActor->IsA(ADFCharacter::StaticClass()))
 	{
 		ADFPlayerController* PlayerContoller = Cast<ADFPlayerController>(OtherActor->GetOwner());
+		if (ADFTimeOutGameMode* GM = Cast<ADFTimeOutGameMode>(GetWorld()->GetAuthGameMode()))
+		{
+			GM->UpdateCrownScores(OtherActor);
+		}
 
 		DestroySelf();
 	}

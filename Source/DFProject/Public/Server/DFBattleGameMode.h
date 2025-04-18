@@ -79,6 +79,9 @@ public:
     UPROPERTY(EditDefaultsOnly, Category = "Awards")
     FName AwardsMap = TEXT("Awards");        // 맵 이름만으로도 OK
 
+    UFUNCTION()
+    void TravelToAwards();
+
     void InitializePlayerScores();
 
 protected:
@@ -96,8 +99,7 @@ protected:
     UFUNCTION()
     void SetGameStateToInProgress();
 
-    UFUNCTION()
-    void TravelToAwards();
+
 
     // 타이머 핸들 (3초 딜레이용)
     FTimerHandle DelayTimerHandle;

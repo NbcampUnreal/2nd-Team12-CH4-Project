@@ -57,7 +57,17 @@ public:
     // bSuddenDeath가 true이면 추가 시간이 무제한으로 주어지며, 이후 점수 차이가 발생하면 승리 결정
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "GameMode")
     bool bSuddenDeath;
+    // 팀전 모드 관련 함수
+    void UpdateTeamScores();
+    void CheckTeamWinningCondition();
 
+
+    
+
+    // 자유전 모드 관련 함수
+    void UpdateCrownScores(AActor* Actor);
+    void UpdateCrownScores();
+    void CheckFreeWinningCondition();
 
 private:
     FTimerHandle TimeoutHandle;
@@ -66,14 +76,6 @@ private:
 
     // Timeout 발생 시 호출되는 함수
     void OnTimeout();
-
-    // 팀전 모드 관련 함수
-    void UpdateTeamScores();
-    void CheckTeamWinningCondition();
-
-    // 자유전 모드 관련 함수
-    void UpdateCrownScores();
-    void CheckFreeWinningCondition();
 
     // 리스폰 함수
     void RespawnPlayer(AController* Controller, APawn* PawnToRespawn);
