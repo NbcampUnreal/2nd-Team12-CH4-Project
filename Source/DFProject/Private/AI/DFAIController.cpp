@@ -3,6 +3,7 @@
 #include "BehaviorTree/BehaviorTree.h"
 #include "BehaviorTree/BlackboardData.h"
 #include "BehaviorTree/BlackboardComponent.h"
+#include "Character/DFPlayerState.h"
 #include "Kismet/GameplayStatics.h" 
 #include "Character/DFCharacter.h"
 
@@ -25,6 +26,31 @@ void ADFAIController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	EndAI();
 	Super::EndPlay(EndPlayReason);
+}
+
+void ADFAIController::OnPossess(APawn* InPawn)
+{
+	Super::OnPossess(InPawn);
+
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	if (APlayerState* PS = GetPlayerState<APlayerState>())
+	{
+		if (PS->GetPlayerName().IsEmpty())
+		{
+			const FString BotName = FString::Printf(TEXT("Bot_%04d"), FMath::RandRange(1000, 9999));
+			PS->SetPlayerName(BotName);
+
+			UE_LOG(LogTemp, Log, TEXT("[AIController] %s ¡æ PlayerName = %s"), *GetName(), *BotName);
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[AIController] %s: PlayerState ¾øÀ½!"), *GetName());
+	}
 }
 
 void ADFAIController::BeginAI(APawn* InPawn)
