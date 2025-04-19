@@ -5,6 +5,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "TimerManager.h"
 #include "Engine/World.h"
+#include "EngineUtils.h"
 #include "Character/DFPlayerState.h"
 #include "Camera/CameraActor.h"
 #include "GameFramework/PlayerStart.h"
@@ -14,12 +15,12 @@
 #include "Server/DFBattleGameState.h"
 #include "AIController.h"
 
-ADFTimeOutGameMode::ADFTimeOutGameMode()
+ADFTimeOutGameMode::ADFTimeOutGameMode()    
 {
     PrimaryActorTick.bCanEverTick = true;
 
     // Timeout 기본값 설정
-    TimeoutDuration = 180.f;
+    TimeoutDuration = 60.f;
     RespawnDelay = 5.f;
 
     // 기본 Battle Mode 설정: 팀전 또는 자유전 (여기서는 팀전으로 설정)
@@ -152,45 +153,111 @@ void ADFTimeOutGameMode::Tick(float DeltaSeconds)
 void ADFTimeOutGameMode::EndGame()
 {
     if (CurrentGameState == EBattleGameState::Ended)
-    {
         return;
-    }
 
-    UE_LOG(LogTemp, Warning, TEXT("게임 종료 - 최종 점수: 팀1=%d, 팀2=%d"), Team1Score, Team2Score);
+    SetGameState(EBattleGameState::Ended);
+    UE_LOG(LogTemp, Warning, TEXT("게임 종료"));
 
-    if (BattleMode == EBattleModeType::TeamBased)
+    // 모든 PlayerState 수집
+    TArray<ADFPlayerState*> AllPS;
+    for (FConstControllerIterator It = GetWorld()->GetControllerIterator(); It; ++It)
     {
-        if (Team1Score == Team2Score)
+        if (AController* C = It->Get())
         {
-            if (bSuddenDeath)
+            if (ADFPlayerState* PS = Cast<ADFPlayerState>(C->PlayerState))
             {
-                UE_LOG(LogTemp, Warning, TEXT("Sudden Death 종료: 최종 동점 상태."));
-            }
-            else
-            {
-                UE_LOG(LogTemp, Warning, TEXT("팀 점수 동점. 게임은 계속 진행됨 (Sudden Death 미발동)."));
-                return;
+                AllPS.Add(PS);
             }
         }
-        else if (Team1Score > Team2Score)
-        {
-            UE_LOG(LogTemp, Warning, TEXT("팀 1 승리."));
-        }
-        else
-        {
-            UE_LOG(LogTemp, Warning, TEXT("팀 2 승리."));
-        }
     }
-    else
+
+    if (BattleMode == EBattleModeType::FreeForAll)
     {
-        // 자유전 모드의 경우, CheckFreeWinningCondition()에서 승리 조건이 결정됨
+        // ✅ 개인 점수 내림차순 정렬
+        AllPS.Sort([](const ADFPlayerState& A, const ADFPlayerState& B)
+            {
+                return A.GetIndividualScore() > B.GetIndividualScore();
+            });
+
+        // GameState에 점수 순위 저장
+        if (ADFBattleGameState* GS = GetGameState<ADFBattleGameState>())
+        {
+            for (int32 i = 0; i < 3; ++i)
+            {
+                if (AllPS.IsValidIndex(i))
+                {
+                    GS->PlaceNames[i] = AllPS[i]->GetPlayerName();
+                    GS->PlaceTimes[i] = (float)AllPS[i]->GetIndividualScore(); // 생존 시간 대신 점수로 저장
+                }
+                else
+                {
+                    GS->PlaceNames[i] = TEXT("None");
+                    GS->PlaceTimes[i] = 0.f;
+                }
+            }
+
+            UE_LOG(LogTemp, Warning,
+                TEXT("개인전 점수 순위: 1위 %s(%d점), 2위 %s(%d점), 3위 %s(%d점)"),
+                *GS->PlaceNames[0], (int32)GS->PlaceTimes[0],
+                *GS->PlaceNames[1], (int32)GS->PlaceTimes[1],
+                *GS->PlaceNames[2], (int32)GS->PlaceTimes[2]
+            );
+        }
+    }
+    else if (BattleMode == EBattleModeType::TeamBased)
+    {
+        Team1Score = 0;
+        Team2Score = 0;
+
+        for (ADFPlayerState* PS : AllPS)
+        {
+            if (PS->TeamID == 1)
+                Team1Score += PS->GetIndividualScore();
+            else if (PS->TeamID == 2)
+                Team2Score += PS->GetIndividualScore();
+        }
+
+        UE_LOG(LogTemp, Warning, TEXT("팀전 최종 점수 ▶ Team1: %d점, Team2: %d점"), Team1Score, Team2Score);
+
+        FString WinnerTeam = TEXT("무승부");
+        if (Team1Score > Team2Score)
+            WinnerTeam = TEXT("Team 1 승리!");
+        else if (Team2Score > Team1Score)
+            WinnerTeam = TEXT("Team 2 승리!");
+
+        UE_LOG(LogTemp, Warning, TEXT("▶ 최종 승리: %s"), *WinnerTeam);
+
+        // GameState에 1위만 저장할 수도 있음
+        if (ADFBattleGameState* GS = GetGameState<ADFBattleGameState>())
+        {
+            GS->PlaceNames[0] = WinnerTeam;
+            GS->PlaceTimes[0] = FMath::Max(Team1Score, Team2Score);
+            GS->PlaceNames[1] = TEXT("None");
+            GS->PlaceNames[2] = TEXT("None");
+        }
     }
 
-    // 추가 결과 처리 및 UI 전환 로직 구현 가능
+    // 관전 전환
+    for (FConstControllerIterator It = GetWorld()->GetControllerIterator(); It; ++It)
+    {
+        if (AController* C = It->Get())
+        {
+            if (APawn* P = C->GetPawn())
+            {
+                HandlePlayerOutOfBounds(P);
+            }
+        }
+    }
 
-    InitializePlayerScores();
-
-    CurrentGameState = EBattleGameState::Ended;
+    // 시상식 이동
+    FTimerHandle AwardTimer;
+    GetWorldTimerManager().SetTimer(
+        AwardTimer,
+        this,
+        &ADFBattleGameMode::TravelToAwards,
+        AwardsDelay,
+        false
+    );
 }
 
 bool ADFTimeOutGameMode::HasTimedOut() const
@@ -336,6 +403,8 @@ void ADFTimeOutGameMode::HandlePlayerOutOfBounds(APawn* Pawn)
 void ADFTimeOutGameMode::OnTimeout()
 {
     UE_LOG(LogTemp, Warning, TEXT("Timeout 발생: %f초 경과"), TimeoutDuration);
+    UE_LOG(LogTemp, Warning, TEXT("타이머 도달! TravelToAwards 실행 예정"));
+    EndGame();
 }
 
 void ADFTimeOutGameMode::UpdateTeamScores()
@@ -356,6 +425,10 @@ void ADFTimeOutGameMode::UpdateTeamScores()
                 else if (PS->TeamID == 2)
                 {
                     Team2Score++;
+                }
+                else
+                {
+                    PS->IndividualScore++;
                 }
             }
         }
@@ -390,9 +463,48 @@ void ADFTimeOutGameMode::CheckTeamWinningCondition()
     }
 }
 
+void ADFTimeOutGameMode::UpdateCrownScores(AActor* Actor)
+{
+    if (!HasAuthority() || !IsValid(Actor)) return;
+
+    APawn* Pawn = Cast<APawn>(Actor);
+    if (!Pawn) return;
+
+    AController* Controller = Pawn->GetController();
+    if (!Controller) return;
+
+    ADFPlayerState* PS = Cast<ADFPlayerState>(Controller->PlayerState);
+    if (!PS) return;
+
+    int32 TeamID = PS->TeamID;
+
+    if (TeamID == 1)
+    {
+        Team1Score++;
+        UE_LOG(LogTemp, Log, TEXT("▶ 팀 1 점수 증가 → %d"), Team1Score);
+    }
+    else if (TeamID == 2)
+    {
+        Team2Score++;
+        UE_LOG(LogTemp, Log, TEXT("▶ 팀 2 점수 증가 → %d"), Team2Score);
+    }
+    else
+    {
+        PS->IndividualScore++;
+        UE_LOG(LogTemp, Log, TEXT("▶ 개인 점수 증가 → %d"), PS->IndividualScore);
+    }
+
+}
+
 void ADFTimeOutGameMode::UpdateCrownScores()
 {
-
+    for (TActorIterator<APawn> It(GetWorld()); It; ++It)
+    {
+        if (APawn* Pawn = *It)
+        {
+            UpdateCrownScores(Pawn);  // 기존에 만든 인자 있는 함수
+        }
+    }
 }
 
 void ADFTimeOutGameMode::CheckFreeWinningCondition()

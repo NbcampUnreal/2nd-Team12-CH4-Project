@@ -31,9 +31,23 @@ public:
     UFUNCTION(BlueprintCallable, Server, Reliable, Category = "Score")
     void AddIndividualScore(int32 ScoreDelta);  
 
+    int32 GetIndividualScore() const
+    {
+        return IndividualScore;
+    }
+
+    // 사망 시점 (0보다 크면 사망 처리됨)
+    UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
+    float DeathTime = -1.f;
+
+    // 생존 여부 확인 함수  
+    UFUNCTION(BlueprintCallable, BlueprintPure)
+    bool IsAlive() const { return DeathTime < 0.f; }
+
     // UI에서 선택한 슬롯 번호
     UPROPERTY(Replicated, BlueprintReadOnly, Category = "Lobby")
     int32 SlotIndex = INDEX_NONE;
+
 
 
 

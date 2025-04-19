@@ -20,6 +20,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "PhysicsEngine/PhysicalAnimationComponent.h"
 #include "Item/DFItemBaseActor.h"
+#include "Character/DFPlayerState.h"
 #include "Net/UnrealNetwork.h"
 #include "PhysicsEngine/PhysicsConstraintComponent.h"
 #include "DirGravity/Public/GravityMovementComponent.h"
@@ -561,6 +562,19 @@ float ADFCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
 	UE_LOG(LogDamaged, Log, TEXT("[%s] 데미지 받음: %.2f, 남은 HP: %.2f (가해자: %s)"),
 		*GetName(), DamageApplied, HP - DamageApplied,
 		DamageCauser ? *DamageCauser->GetName() : TEXT("알 수 없음"));
+
+	if (AController* MyController = GetController())
+	{
+		if (ADFPlayerState* MyPS = Cast<ADFPlayerState>(MyController->PlayerState))
+		{
+			if (EventInstigator && EventInstigator->PlayerState)
+			{
+				MyPS->LastDamageDealer = EventInstigator->PlayerState;
+
+				UE_LOG(LogDamaged, Log, TEXT("▶ 최종 가해자 기록: %s"), *MyPS->LastDamageDealer->GetPlayerName());
+			}
+		}
+	}
 	
 	if (
 		StateManager->IsCurrentState(ECharacterStateType::Stunned) ||

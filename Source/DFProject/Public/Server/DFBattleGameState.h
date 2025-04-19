@@ -48,6 +48,9 @@ public:
     FOnGameStateChangedSignature OnGameStateChanged;
     // 네트워크 복제 설정 함수
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+    // 1~3위 이름/시간을 임시 저장
+    FString PlaceNames[3];
+    float   PlaceTimes[3];
 
 protected:
     // 복제로 인해 클라이언트에서 게임 상태가 업데이트될 때 호출되는 함수

@@ -72,6 +72,16 @@ public:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Game Settings")
     ACameraActor* SpectatorCamera; // 관전 카메라 액터 (사전에 레벨에 배치해둔 카메라 액터를 참조)
 
+    // Awards 이동용 설정
+    UPROPERTY(EditDefaultsOnly, Category = "Awards")
+    float AwardsDelay = 3.f;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Awards")
+    FName AwardsMap = TEXT("Awards");        // 맵 이름만으로도 OK
+
+    UFUNCTION()
+    void TravelToAwards();
+
     void InitializePlayerScores();
 
 protected:
@@ -88,6 +98,8 @@ protected:
     // 게임 상태를 InProgress로 전환하는 함수
     UFUNCTION()
     void SetGameStateToInProgress();
+
+
 
     // 타이머 핸들 (3초 딜레이용)
     FTimerHandle DelayTimerHandle;

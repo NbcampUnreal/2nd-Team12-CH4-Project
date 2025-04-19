@@ -53,22 +53,9 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Item")
 	TSubclassOf<UAnimInstance> AnimBP;
 
-	UFUNCTION(BlueprintCallable, Category = "Item")
-	FText GetDisplayItemName() const;
-
-	UFUNCTION(BlueprintCallable, Category = "Item")
-	FName GetItemId() const;
-
-	UFUNCTION(BlueprintCallable, Category = "Item")
-	int32 GetItemPrice() const;
-
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<ADFItemBaseActor> ItemActorClass;
 
 	UPROPERTY(EditAnywhere)
-	TSubclassOf<UAbilityStrategy> CharacterAbility;
-
-	virtual FPrimaryAssetId GetPrimaryAssetId() const override;
-
-	
+	TSubclassOf<UAbilityStrategy> CharacterAbility;	
 };
